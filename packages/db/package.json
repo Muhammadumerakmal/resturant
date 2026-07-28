@@ -10,7 +10,7 @@
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx --env-file=../../apps/web/.env.local src/seed.ts",
+    "db:seed": "tsx --env-file=../../backend/.env src/seed.ts",
     "db:studio": "drizzle-kit studio",
     "typecheck": "tsc --noEmit"
   },

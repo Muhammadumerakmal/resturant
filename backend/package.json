@@ -1,0 +1,27 @@
+{
+  "name": "@repo/backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "start": "tsx --env-file=.env src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openai/agents": "^0.14.0",
+    "@repo/agent": "*",
+    "@repo/db": "*",
+    "@repo/shared": "*",
+    "cors": "^2.8.5",
+    "drizzle-orm": "^0.45.2",
+    "express": "^4.21.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20",
+    "tsx": "^4.23.1",
+    "typescript": "^5"
+  }
+}

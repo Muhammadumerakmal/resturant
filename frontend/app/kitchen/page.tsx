@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useOrders } from "@/lib/useOrders";
+import { api } from "@/lib/api";
 import { NEXT_STATUS, type OrderStatus } from "@repo/shared";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -24,7 +25,7 @@ export default function KitchenPage() {
     if (!next) return;
     setBusy(id);
     try {
-      await fetch(`/api/v1/orders/${id}/status`, {
+      await fetch(api(`/api/v1/orders/${id}/status`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: next }),

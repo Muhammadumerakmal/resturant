@@ -12,6 +12,7 @@
   "dependencies": {
     "@openai/agents": "^0.14.0",
     "@repo/db": "*",
+    "@repo/shared": "*",
     "drizzle-orm": "^0.45.2",
     "openai": "^6.49.0",
     "zod": "^4.4.3"

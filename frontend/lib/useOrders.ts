@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { OrderWithItems } from "@repo/shared";
+import { api } from "./api";
 
 // Polling client for the order list (PRD §6.3 baseline). SSE replaces this later.
 export function useOrders(opts?: { status?: string; intervalMs?: number }) {
@@ -15,7 +16,7 @@ export function useOrders(opts?: { status?: string; intervalMs?: number }) {
   const load = useCallback(async () => {
     try {
       const qs = status ? `?status=${encodeURIComponent(status)}` : "";
-      const res = await fetch(`/api/v1/orders${qs}`, { cache: "no-store" });
+      const res = await fetch(api(`/api/v1/orders${qs}`), { cache: "no-store" });
       if (!res.ok) throw new Error("bad status");
       setOrders(await res.json());
       setError(null);

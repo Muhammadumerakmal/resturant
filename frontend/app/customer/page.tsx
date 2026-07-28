@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { formatPrice } from "@repo/shared";
-import type { ProposedOrder } from "@repo/agent";
-import type { OrderWithItems } from "@repo/shared";
+import type { ProposedOrder, OrderWithItems } from "@repo/shared";
+import { api } from "@/lib/api";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -36,7 +36,7 @@ export default function CustomerPage() {
     setMessages((m) => [...m, { role: "user", content: text }]);
     setSending(true);
     try {
-      const res = await fetch("/api/v1/agent/chat", {
+      const res = await fetch(api("/api/v1/agent/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionId, message: text }),
@@ -60,7 +60,7 @@ export default function CustomerPage() {
     setSending(true);
     setError(null);
     try {
-      const res = await fetch("/api/v1/orders", {
+      const res = await fetch(api("/api/v1/orders"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
