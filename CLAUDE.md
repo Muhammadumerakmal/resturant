@@ -4,23 +4,44 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-**Foundation built (PRD Phases 1–3).** A Next.js (App Router) + TypeScript + Tailwind app runs at
-the repo root, backed by live **Neon Postgres** via **Drizzle** (`pg`/node-postgres driver). What
-exists today:
-- DB schema + migration + seed (`db/`), 9 seeded menu items.
-- CRUD Route Handlers under `app/api/v1/` (`menu`, `orders` GET/POST, `orders/[id]`,
-  `orders/[id]/status`), all `zod`-validated, order creation wrapped in a single transaction.
-- Three UI shells (`app/customer`, `app/kitchen`, `app/owner`) that poll the API (~2.5–3s).
+**PRD Phases 1–4 built, inside a Turborepo monorepo.** A Next.js (App Router) app in `apps/web`,
+backed by live **Neon Postgres** via **Drizzle** (`pg`/node-postgres driver), with shared logic
+extracted into workspace packages. What exists today:
+- **DB** (`packages/db`): schema + migration + seed, 9 seeded menu items.
+- **CRUD API** (`apps/web/app/api/v1/`): `menu`, `orders` GET/POST, `orders/[id]`,
+  `orders/[id]/status` — `zod`-validated, order creation in a single transaction.
+- **Agent** (`packages/agent`, Phase 4): OpenAI Agents SDK against any OpenAI-compatible endpoint.
+  Router "Host" agent hands off to an "Order Taker"; tools `get_menu` / `check_item_availability` /
+  `propose_order` bound to the real menu; input guardrail. Exposed at `POST /api/v1/agent/chat`.
+- **UI** (`apps/web/app/{customer,kitchen,owner}`): customer is a **chat** that confirms a proposed
+  order via `POST /orders`; kitchen/owner poll (~2.5–3s).
 
-**Deferred** (not yet built): the OpenAI agent + `/api/v1/agent/chat` (Phase 4), SSE +
-`LISTEN/NOTIFY` realtime (Phase 5), auth/rate-limiting/load-testing (Phase 6). The customer page
-is a manual order form standing in for the conversational agent until Phase 4.
+**Deferred** (not yet built): SSE + `LISTEN/NOTIFY` realtime (Phase 5), auth/rate-limiting beyond
+a light in-memory throttle/load-testing (Phase 6).
 
-Two deliberate choices worth knowing:
+Deliberate choices worth knowing:
 - **`pg` (node-postgres), not `neon-http`** — the HTTP driver can't do transactions, which PRD §8
-  requires for order writes. Routes set `runtime = "nodejs"`. `db/index.ts` reuses one pool.
-- **`order_items` also snapshots `unit_price_cents`** (a small extension of the §6.1 DDL) because
-  §6.2's own rationale calls out price changes; this makes owner revenue exact.
+  requires. Routes set `runtime = "nodejs"`. `packages/db` reuses one pool.
+- **`order_items` also snapshots `unit_price_cents`** (small extension of the §6.1 DDL) — §6.2's
+  own rationale calls out price changes; makes owner revenue exact.
+- **Structured order via the `propose_order` tool, not output-schema-across-handoff.** The tool
+  validates against the DB and stashes the draft in the run **context**; the route reads it back.
+  Robust across OpenAI-compatible models (tool-calling is widely supported; strict json_schema is not).
+- **Agent never writes to the DB** — it returns a proposed order; the chat UI confirms → `POST /orders`.
+
+## Repo layout (Turborepo + npm workspaces)
+
+```
+apps/web/            Next.js app (routes, pages, next.config, .env.local, @/ = apps/web root)
+packages/db/         Drizzle schema, client, migrations, seed, drizzle.config  → @repo/db, @repo/db/schema
+packages/shared/     types, zod validation, format, errors                      → @repo/shared
+packages/agent/      OpenAI Agents SDK: openai config, tools, agents, context   → @repo/agent
+turbo.json           task pipelines (dev/build/lint/typecheck)
+tsconfig.base.json   shared compiler options (packages extend it)
+```
+Packages are **internal (source-exported) packages** — no build step; `apps/web` lists them in
+`transpilePackages`. Cross-package deps: `shared` and `agent` both depend on `db`; `web` depends on
+all three.
 
 ## What is being built
 
@@ -79,16 +100,17 @@ asked (PRD §12).
 
 ## Commands
 
-- `npm run dev` — start the dev server (Turbopack) at http://localhost:3000
-- `npm run build` / `npm run start` — production build / serve
-- `npm run lint` — ESLint
-- `npm run db:generate` — generate a Drizzle migration from `db/schema.ts` into `db/migrations/`
-- `npm run db:migrate` — apply migrations to the DB in `DATABASE_URL`
+Run from the repo root (they fan out through Turborepo / npm workspaces):
+- `npm run dev` — start the app (Turbopack) at http://localhost:3000
+- `npm run build` / `npm run lint` / `npm run typecheck` — via `turbo`
+- `npm run db:generate` — generate a Drizzle migration (delegates to `@repo/db`)
+- `npm run db:migrate` — apply migrations to `DATABASE_URL`
 - `npm run db:seed` — seed menu items (idempotent; skips if `menu_items` is non-empty)
-- `npm run db:studio` — open Drizzle Studio
+- `npm run db:studio` — Drizzle Studio
 
-**Env:** `.env.local` holds `DATABASE_URL` (Neon **pooled** connection string) and is gitignored.
-`drizzle.config.ts` and the `db:seed` script load it explicitly (drizzle-kit/tsx don't read Next's
-env automatically). No test suite exists yet.
+**Env:** the single `.env.local` lives in **`apps/web/`** (Next reads it natively). It holds
+`DATABASE_URL` (Neon **pooled** string) and the agent's `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY`
+(any OpenAI-compatible, tool-calling-capable endpoint). `packages/db` tooling loads that same file
+via `../../apps/web/.env.local`. `.env*` is gitignored. No test suite yet.
 
-Follow the phased build order in PRD §11 for what comes next (agent → realtime → hardening).
+Follow the phased build order in PRD §11 for what comes next (realtime → hardening).
