@@ -1,15 +1,13 @@
-import { Router } from "express";
 import { asc } from "drizzle-orm";
 import { db } from "@repo/db";
 import { menuItems } from "@repo/db/schema";
 
-export const menuRouter = Router();
+// Model layer: all menu data access lives here. Controllers never touch the DB
+// directly — they call these functions.
 
-// GET /api/v1/menu -> MenuItem[]
-menuRouter.get("/", async (_req, res) => {
-  const items = await db
+export function listMenu() {
+  return db
     .select()
     .from(menuItems)
     .orderBy(asc(menuItems.category), asc(menuItems.name));
-  res.json(items);
-});
+}

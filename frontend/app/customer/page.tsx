@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { Bot, CheckCircle2, Send, User, UtensilsCrossed } from "lucide-react";
 import { formatPrice } from "@repo/shared";
 import type { ProposedOrder, OrderWithItems } from "@repo/shared";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/cn";
+import { Button } from "../_components/ui/Button";
+import { Card } from "../_components/ui/Card";
+import { Input } from "../_components/ui/Input";
+import { HomeLink } from "../_components/ui/PageHeader";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -26,7 +31,7 @@ export default function CustomerPage() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages, proposed]);
+  }, [messages, proposed, placed, sending]);
 
   async function send() {
     const text = input.trim();
@@ -85,89 +90,102 @@ export default function CustomerPage() {
   }
 
   return (
-    <main className="mx-auto flex h-screen max-w-2xl flex-col px-4 py-6">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-xl font-bold">Order Assistant</h1>
-        <Link href="/" className="text-sm text-neutral-500 hover:underline">
-          ← Home
-        </Link>
+    <main className="mx-auto flex h-screen w-full max-w-2xl flex-col px-4 py-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <UtensilsCrossed className="h-5 w-5" />
+          </span>
+          <div>
+            <h1 className="text-lg font-bold leading-tight">Order Assistant</h1>
+            <p className="text-xs text-muted-foreground">
+              Ask about the menu or order in plain language
+            </p>
+          </div>
+        </div>
+        <HomeLink />
       </div>
 
       <div
         ref={scrollRef}
-        className="mt-4 flex-1 space-y-3 overflow-y-auto rounded-xl border border-neutral-200 p-4 dark:border-neutral-800"
+        className="mt-4 flex-1 space-y-4 overflow-y-auto rounded-2xl border border-border bg-muted/40 p-4"
       >
         {messages.map((m, i) => (
-          <div
-            key={i}
-            className={m.role === "user" ? "text-right" : "text-left"}
-          >
-            <span
-              className={`inline-block max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
-                m.role === "user"
-                  ? "bg-neutral-900 text-white dark:bg-white dark:text-black"
-                  : "bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
-              }`}
-            >
-              {m.content}
-            </span>
-          </div>
+          <ChatBubble key={i} role={m.role} content={m.content} />
         ))}
-        {sending && (
-          <div className="text-left text-sm text-neutral-400">…</div>
-        )}
+
+        {sending && !placed && <TypingBubble />}
 
         {placed && (
-          <div className="rounded-xl border border-green-300 bg-green-50 p-4 text-sm dark:border-green-800 dark:bg-green-950">
-            <div className="font-semibold text-green-800 dark:text-green-300">
-              Order placed ✅ #{placed.id.slice(0, 8)} — {placed.status}
-            </div>
+          <div className="animate-rise-in flex items-start gap-3">
+            <Avatar role="assistant" />
+            <Card className="border-success-border bg-success-bg p-4">
+              <div className="flex items-center gap-2 font-semibold text-success">
+                <CheckCircle2 className="h-5 w-5" />
+                Order placed!
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                <span className="font-mono">#{placed.id.slice(0, 8)}</span> —{" "}
+                <span className="capitalize">{placed.status}</span>. We&apos;ll
+                get cooking right away.
+              </p>
+            </Card>
           </div>
         )}
 
         {proposed && !placed && (
-          <div className="rounded-xl border border-neutral-300 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
-            <div className="mb-2 text-sm font-semibold">Review your order</div>
-            <ul className="space-y-1 text-sm">
-              {proposed.items.map((it, i) => (
-                <li key={i} className="flex justify-between">
-                  <span>
-                    {it.quantity} × {it.name}
-                    {it.notes ? (
-                      <span className="text-neutral-500"> — {it.notes}</span>
-                    ) : null}
-                  </span>
-                  <span className="text-neutral-500">
-                    {formatPrice(it.unit_price_cents * it.quantity)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-2 flex justify-between border-t border-neutral-200 pt-2 text-sm font-semibold dark:border-neutral-700">
-              <span>Total</span>
-              <span>{formatPrice(proposed.total_cents)}</span>
-            </div>
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={confirmOrder}
-                disabled={sending}
-                className="rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
-              >
-                Confirm &amp; place order
-              </button>
-              <button
-                onClick={() => setProposed(null)}
-                disabled={sending}
-                className="rounded-lg border border-neutral-300 px-4 py-2 text-sm dark:border-neutral-700"
-              >
-                Keep editing
-              </button>
-            </div>
+          <div className="animate-rise-in flex items-start gap-3">
+            <Avatar role="assistant" />
+            <Card className="w-full p-4">
+              <div className="mb-3 text-sm font-semibold">Review your order</div>
+              <ul className="space-y-2 text-sm">
+                {proposed.items.map((it, i) => (
+                  <li key={i} className="flex justify-between gap-3">
+                    <span>
+                      <span className="font-medium text-primary">
+                        {it.quantity}×
+                      </span>{" "}
+                      {it.name}
+                      {it.notes ? (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          — {it.notes}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {formatPrice(it.unit_price_cents * it.quantity)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex justify-between border-t border-border pt-3 text-sm font-semibold">
+                <span>Total</span>
+                <span className="tabular-nums">
+                  {formatPrice(proposed.total_cents)}
+                </span>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <Button onClick={confirmOrder} disabled={sending}>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Confirm &amp; place order
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setProposed(null)}
+                  disabled={sending}
+                >
+                  Keep editing
+                </Button>
+              </div>
+            </Card>
           </div>
         )}
       </div>
 
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && (
+        <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+      )}
 
       <form
         onSubmit={(e) => {
@@ -176,20 +194,83 @@ export default function CustomerPage() {
         }}
         className="mt-3 flex gap-2"
       >
-        <input
+        <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="e.g. What's vegetarian? or: two butter chickens and a naan"
-          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
         />
-        <button
+        <Button
           type="submit"
           disabled={sending || !input.trim()}
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+          aria-label="Send message"
+          className="shrink-0 px-3"
         >
-          Send
-        </button>
+          <Send className="h-4 w-4" />
+        </Button>
       </form>
     </main>
+  );
+}
+
+function Avatar({ role }: { role: "user" | "assistant" }) {
+  return (
+    <span
+      className={cn(
+        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+        role === "assistant"
+          ? "bg-primary/10 text-primary"
+          : "bg-foreground text-background",
+      )}
+    >
+      {role === "assistant" ? (
+        <Bot className="h-4 w-4" />
+      ) : (
+        <User className="h-4 w-4" />
+      )}
+    </span>
+  );
+}
+
+function ChatBubble({ role, content }: ChatMessage) {
+  const isUser = role === "user";
+  return (
+    <div
+      className={cn(
+        "animate-rise-in flex items-start gap-3",
+        isUser && "flex-row-reverse",
+      )}
+    >
+      <Avatar role={role} />
+      <div
+        className={cn(
+          "max-w-[80%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm shadow-sm",
+          isUser
+            ? "rounded-tr-sm bg-primary text-primary-foreground"
+            : "rounded-tl-sm border border-border bg-card text-card-foreground",
+        )}
+      >
+        {content}
+      </div>
+    </div>
+  );
+}
+
+function TypingBubble() {
+  return (
+    <div className="animate-rise-in flex items-start gap-3">
+      <Avatar role="assistant" />
+      <div className="flex gap-1 rounded-2xl rounded-tl-sm border border-border bg-card px-4 py-3.5">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="h-1.5 w-1.5 rounded-full bg-muted-foreground"
+            style={{
+              animation: "typing-bounce 1.2s infinite",
+              animationDelay: `${i * 0.15}s`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

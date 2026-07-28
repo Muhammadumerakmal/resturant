@@ -1,26 +1,107 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. Warm, appetite-friendly palette: terracotta/amber brand over
+ * warm (stone) neutrals. Light values live in :root; dark overrides in the
+ * prefers-color-scheme block. All are exposed to Tailwind v4 via @theme inline
+ * so utilities like bg-card / text-muted-foreground / ring-ring resolve.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf8f5;
+  --foreground: #1c1917;
+  --card: #ffffff;
+  --card-foreground: #1c1917;
+  --muted: #f5f2ee;
+  --muted-foreground: #78716c;
+  --border: #e7e2db;
+  --input: #e7e2db;
+
+  --primary: #d1502e;
+  --primary-hover: #b8431f;
+  --primary-foreground: #ffffff;
+  --accent: #f2a900;
+  --ring: #d1502e;
+
+  --success: #15803d;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+
+  --radius: 1rem;
+  --shadow-card: 0 1px 2px rgb(28 25 23 / 0.04), 0 4px 16px rgb(28 25 23 / 0.05);
+  --shadow-pop: 0 8px 30px rgb(28 25 23 / 0.10);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #191512;
+    --foreground: #f5f2ee;
+    --card: #23201c;
+    --card-foreground: #f5f2ee;
+    --muted: #2a2621;
+    --muted-foreground: #a8a29e;
+    --border: #35302a;
+    --input: #35302a;
+
+    --primary: #e86a45;
+    --primary-hover: #f07a56;
+    --primary-foreground: #1c1917;
+    --accent: #f2b933;
+    --ring: #e86a45;
+
+    --success: #4ade80;
+    --success-bg: #12241a;
+    --success-border: #1f4d33;
+
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.35);
+    --shadow-pop: 0 8px 30px rgb(0 0 0 / 0.5);
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+
+  --radius-card: var(--radius);
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Chat typing indicator + subtle entrance for new content */
+@keyframes typing-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-3px); opacity: 1; }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-rise-in {
+  animation: rise-in 0.25s ease-out both;
 }

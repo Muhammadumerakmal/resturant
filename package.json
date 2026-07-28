@@ -16,7 +16,9 @@
     "db:generate": "npm run db:generate -w @repo/db",
     "db:migrate": "npm run db:migrate -w @repo/db",
     "db:seed": "npm run db:seed -w @repo/db",
-    "db:studio": "npm run db:studio -w @repo/db"
+    "db:triggers": "npm run db:triggers -w @repo/db",
+    "db:studio": "npm run db:studio -w @repo/db",
+    "loadtest": "node scripts/loadtest.mjs"
   },
   "devDependencies": {
     "turbo": "^2"

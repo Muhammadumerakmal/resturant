@@ -1,42 +1,69 @@
 import Link from "next/link";
+import {
+  ArrowRight,
+  BarChart3,
+  ChefHat,
+  MessageSquareHeart,
+  UtensilsCrossed,
+} from "lucide-react";
+import { Card } from "./_components/ui/Card";
 
 const ROLES = [
   {
     href: "/customer",
     title: "Customer",
-    desc: "Browse the menu and place an order.",
+    desc: "Chat with the ordering assistant and place an order.",
+    icon: MessageSquareHeart,
   },
   {
     href: "/kitchen",
     title: "Kitchen",
-    desc: "Live order queue with status controls.",
+    desc: "Live order queue with one-tap status controls.",
+    icon: ChefHat,
   },
   {
     href: "/owner",
     title: "Owner",
-    desc: "Live orders and basic daily totals.",
+    desc: "Live orders and basic daily sales totals.",
+    icon: BarChart3,
   },
 ];
 
 export default function Home() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <h1 className="text-3xl font-bold tracking-tight">Restaurant Ordering</h1>
-      <p className="mt-2 text-neutral-500">
-        Foundation build — customer ordering, kitchen queue, and owner dashboard,
-        backed by Neon Postgres. (The conversational agent arrives in a later phase.)
+    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-16 sm:py-24">
+      <div className="flex items-center gap-2 text-primary">
+        <UtensilsCrossed className="h-5 w-5" />
+        <span className="text-sm font-semibold uppercase tracking-widest">
+          Tavola
+        </span>
+      </div>
+      <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+        Order by conversation.
+      </h1>
+      <p className="mt-3 max-w-xl text-lg text-muted-foreground">
+        A restaurant ordering experience where customers talk to an AI assistant,
+        the kitchen sees a live queue, and the owner watches sales in real time.
       </p>
-      <div className="mt-10 grid gap-4 sm:grid-cols-3">
-        {ROLES.map((r) => (
-          <Link
-            key={r.href}
-            href={r.href}
-            className="rounded-xl border border-neutral-200 p-5 transition hover:border-neutral-400 hover:shadow-sm dark:border-neutral-800 dark:hover:border-neutral-600"
-          >
-            <div className="text-lg font-semibold">{r.title}</div>
-            <div className="mt-1 text-sm text-neutral-500">{r.desc}</div>
-          </Link>
-        ))}
+
+      <div className="mt-12 grid gap-4 sm:grid-cols-3">
+        {ROLES.map((r) => {
+          const Icon = r.icon;
+          return (
+            <Link key={r.href} href={r.href} className="group">
+              <Card className="h-full p-5 transition-all group-hover:-translate-y-0.5 group-hover:shadow-[var(--shadow-pop)]">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div className="mt-4 flex items-center gap-1.5 text-lg font-semibold">
+                  {r.title}
+                  <ArrowRight className="h-4 w-4 -translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{r.desc}</p>
+              </Card>
+            </Link>
+          );
+        })}
       </div>
     </main>
   );

@@ -36,7 +36,16 @@ Deliberate choices worth knowing:
 
 ```
 frontend/            Next.js UI (pages only; @/ = frontend root, .env.local, lib/api.ts)  → @repo/frontend
-backend/             Express API service (src/index.ts + src/routes/*, .env)               → @repo/backend
+backend/             Express API service (MVC; .env)                                        → @repo/backend
+  src/index.ts       server bootstrap (listen + start realtime listener)
+  src/app.ts         Express app factory (middleware + route mounting)
+  src/config/        env config
+  src/routes/        route → controller wiring (index.ts mounts menu/order/agent under /api/v1)
+  src/controllers/   HTTP request/response handling + input validation
+  src/models/        data access (Drizzle queries over @repo/db)
+  src/services/      business logic (agent session/run)
+  src/middlewares/   auth (staff key), rate limiting
+  src/realtime/      SSE + Postgres LISTEN/NOTIFY order listener
 packages/db/         Drizzle schema, client, migrations, seed, drizzle.config  → @repo/db, @repo/db/schema
 packages/shared/     types, zod validation, format, errors, ProposedOrder DTO  → @repo/shared
 packages/agent/      OpenAI Agents SDK: openai config, tools, agents, context   → @repo/agent
