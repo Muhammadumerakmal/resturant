@@ -64,10 +64,19 @@ export async function updateOrderStatus(req: Request, res: Response) {
     return;
   }
 
-  const full = await orderModel.updateOrderStatus(id, parsed.data.status);
-  if (!full) {
-    res.status(404).json({ error: "Not found" });
-    return;
+  try {
+    const full = await orderModel.updateOrderStatus(id, parsed.data.status);
+    if (!full) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json(full);
+  } catch (err) {
+    if (err instanceof OrderError) {
+      res.status(409).json({ error: err.message });
+      return;
+    }
+    console.error("PATCH /orders/:id/status failed:", err);
+    res.status(500).json({ error: "Internal error" });
   }
-  res.json(full);
 }

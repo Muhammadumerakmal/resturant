@@ -6,11 +6,13 @@ import {
   integer,
   boolean,
   timestamp,
+  doublePrecision,
   index,
   check,
 } from "drizzle-orm/pg-core";
 
-// Mirrors PRD §6.1. Menu is seeded manually for v1 (no admin UI).
+// Mirrors PRD §6.1. Editable via the owner admin UI (create/update/availability/
+// archive); hard-delete is blocked when an item is referenced by past order_items.
 export const menuItems = pgTable("menu_items", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
@@ -22,7 +24,10 @@ export const menuItems = pgTable("menu_items", {
     .notNull()
     .default(sql`'{}'::text[]`), // 'vegetarian', 'spicy', 'gluten-free'
   available: boolean("available").notNull().default(true),
+  // Soft-delete: hidden from menus but retained so past orders' FKs stay valid.
+  archived: boolean("archived").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const orders = pgTable(
@@ -31,11 +36,30 @@ export const orders = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     status: text("status").notNull().default("received"), // received|preparing|ready|served
     source: text("source").notNull().default("agent"), // agent|manual
+    // Fulfillment type. Delivery orders carry customer/destination fields and a
+    // delivery lifecycle derived from status + dispatchedAt/deliveredAt.
+    orderType: text("order_type").notNull().default("dine_in"), // dine_in|delivery|pickup
     sessionId: text("session_id"),
+    // Delivery details (nullable; only set for `delivery` orders).
+    customerName: text("customer_name"),
+    customerPhone: text("customer_phone"),
+    deliveryAddress: text("delivery_address"),
+    destLat: doublePrecision("dest_lat"),
+    destLng: doublePrecision("dest_lng"),
+    etaMinutes: integer("eta_minutes"),
+    dispatchedAt: timestamp("dispatched_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("idx_orders_status").on(t.status)],
+  (t) => [
+    index("idx_orders_status").on(t.status),
+    index("idx_orders_order_type").on(t.orderType),
+    check(
+      "orders_order_type_valid",
+      sql`${t.orderType} in ('dine_in', 'delivery', 'pickup')`,
+    ),
+  ],
 );
 
 export const orderItems = pgTable(

@@ -2,8 +2,10 @@ import Link from "next/link";
 import {
   ArrowRight,
   BarChart3,
+  BookOpen,
   ChefHat,
   MessageSquareHeart,
+  Receipt,
   UtensilsCrossed,
 } from "lucide-react";
 import { Card } from "./_components/ui/Card";
@@ -64,6 +66,23 @@ export default function Home() {
             </Link>
           );
         })}
+      </div>
+
+      <div className="mt-6 flex flex-wrap gap-4 text-sm">
+        <Link
+          href="/menu"
+          className="inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <BookOpen className="h-4 w-4" />
+          Browse the menu
+        </Link>
+        <Link
+          href="/orders"
+          className="inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Receipt className="h-4 w-4" />
+          Your orders
+        </Link>
       </div>
     </main>
   );

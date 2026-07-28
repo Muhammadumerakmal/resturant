@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { OrderWithItems } from "@repo/shared";
-import { api } from "./api";
+import { api, apiFetch } from "./api";
 
 // Realtime order list (PRD §6.3): subscribes to the backend SSE stream and
 // refetches on each order_change event; falls back to polling if SSE drops (§10).
@@ -23,12 +23,7 @@ export function useOrders(opts?: {
   const load = useCallback(async () => {
     try {
       const qs = status ? `?status=${encodeURIComponent(status)}` : "";
-      const res = await fetch(api(`/api/v1/orders${qs}`), {
-        cache: "no-store",
-        headers: staffKey ? { "x-staff-key": staffKey } : {},
-      });
-      if (!res.ok) throw new Error(String(res.status));
-      setOrders(await res.json());
+      setOrders(await apiFetch<OrderWithItems[]>(`/api/v1/orders${qs}`, { staffKey }));
       setError(null);
     } catch {
       setError("Connection lost — retrying…");

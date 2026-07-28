@@ -16,3 +16,18 @@ export const NEXT_STATUS: Record<OrderStatus, OrderStatus | null> = {
   ready: "served",
   served: null,
 };
+
+// Fulfillment type. `delivery` orders carry customer + destination details and
+// surface the delivery tracking flow ("where's my food").
+export const ORDER_TYPES = ["dine_in", "delivery", "pickup"] as const;
+export type OrderType = (typeof ORDER_TYPES)[number];
+
+// Customer-facing delivery lifecycle, derived from an order's kitchen `status`
+// plus its dispatchedAt/deliveredAt timestamps (see @repo/shared/tracking).
+export const DELIVERY_STAGES = [
+  "confirmed",
+  "preparing",
+  "out_for_delivery",
+  "delivered",
+] as const;
+export type DeliveryStage = (typeof DELIVERY_STAGES)[number];

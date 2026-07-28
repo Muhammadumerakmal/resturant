@@ -1,7 +1,12 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "@repo/db";
 import { orders, orderItems, menuItems } from "@repo/db/schema";
-import { OrderError, type CreateOrderInput } from "@repo/shared";
+import {
+  OrderError,
+  NEXT_STATUS,
+  type CreateOrderInput,
+  type OrderStatus,
+} from "@repo/shared";
 
 // Model layer: all order data access lives here. Business rules that are really
 // about data integrity (menu items exist, are available, single-transaction
@@ -27,7 +32,8 @@ export function findOrderById(id: string) {
 // orders. Throws OrderError for invalid/unavailable items so the controller can
 // map it to a 400.
 export function createOrder(input: CreateOrderInput) {
-  const { items, session_id, source } = input;
+  const { items, session_id, source, order_type } = input;
+  const isDelivery = order_type === "delivery";
 
   return db.transaction(async (tx) => {
     const ids = [...new Set(items.map((i) => i.menu_item_id))];
@@ -45,7 +51,17 @@ export function createOrder(input: CreateOrderInput) {
 
     const [order] = await tx
       .insert(orders)
-      .values({ source: source ?? "manual", sessionId: session_id ?? null })
+      .values({
+        source: source ?? "manual",
+        sessionId: session_id ?? null,
+        orderType: order_type ?? "dine_in",
+        // Delivery details only apply to delivery orders (validated upstream).
+        customerName: isDelivery ? (input.customer_name ?? null) : null,
+        customerPhone: isDelivery ? (input.customer_phone ?? null) : null,
+        deliveryAddress: isDelivery ? (input.address ?? null) : null,
+        destLat: isDelivery ? (input.dest_lat ?? null) : null,
+        destLng: isDelivery ? (input.dest_lng ?? null) : null,
+      })
       .returning();
 
     const insertedItems = await tx
@@ -67,13 +83,27 @@ export function createOrder(input: CreateOrderInput) {
 }
 
 // Updates status and returns the full order (with items), or null if not found.
-export async function updateOrderStatus(id: string, status: string) {
-  const [updated] = await db
+// Enforces the kitchen state machine (received→preparing→ready→served): only the
+// single legal next step is accepted, so the queue can't skip or move backwards.
+// Throws OrderError (→ 409) on an illegal transition.
+export async function updateOrderStatus(id: string, status: OrderStatus) {
+  const current = await db.query.orders.findFirst({
+    where: eq(orders.id, id),
+    columns: { status: true },
+  });
+  if (!current) return null;
+
+  const from = current.status as OrderStatus;
+  if (status !== from && NEXT_STATUS[from] !== status) {
+    throw new OrderError(
+      `Can't move order from "${from}" to "${status}"`,
+    );
+  }
+
+  await db
     .update(orders)
     .set({ status, updatedAt: new Date() })
-    .where(eq(orders.id, id))
-    .returning({ id: orders.id });
+    .where(eq(orders.id, id));
 
-  if (!updated) return null;
   return findOrderById(id);
 }

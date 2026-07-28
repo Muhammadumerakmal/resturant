@@ -1,17 +1,32 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, CheckCircle2, Send, User, UtensilsCrossed } from "lucide-react";
+import Link from "next/link";
+import {
+  Bike,
+  CheckCircle2,
+  ClipboardList,
+  Send,
+  UtensilsCrossed,
+} from "lucide-react";
 import { formatPrice } from "@repo/shared";
-import type { ProposedOrder, OrderWithItems } from "@repo/shared";
-import { api } from "@/lib/api";
+import type { ProposedOrder, OrderWithItems, OrderType } from "@repo/shared";
+import { apiFetch } from "@/lib/api";
+import { useOrderHistory } from "@/lib/useOrderHistory";
 import { cn } from "@/lib/cn";
+import { Avatar } from "../_components/chat/Avatar";
+import { ChatBubble, type ChatMessage } from "../_components/chat/ChatBubble";
+import { TypingBubble } from "../_components/chat/TypingBubble";
 import { Button } from "../_components/ui/Button";
 import { Card } from "../_components/ui/Card";
 import { Input } from "../_components/ui/Input";
 import { HomeLink } from "../_components/ui/PageHeader";
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
+const ORDER_TYPE_OPTIONS: { value: OrderType; label: string }[] = [
+  { value: "dine_in", label: "Dine in" },
+  { value: "pickup", label: "Pickup" },
+  { value: "delivery", label: "Delivery" },
+];
 
 export default function CustomerPage() {
   const [sessionId] = useState(() => crypto.randomUUID());
@@ -27,6 +42,12 @@ export default function CustomerPage() {
   const [proposed, setProposed] = useState<ProposedOrder | null>(null);
   const [placed, setPlaced] = useState<OrderWithItems | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Fulfillment selection for the current proposed order.
+  const [orderType, setOrderType] = useState<OrderType>("dine_in");
+  const [delivery, setDelivery] = useState({ name: "", phone: "", address: "" });
+
+  const { add: addToHistory } = useOrderHistory();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,18 +62,12 @@ export default function CustomerPage() {
     setMessages((m) => [...m, { role: "user", content: text }]);
     setSending(true);
     try {
-      const res = await fetch(api("/api/v1/agent/chat"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId, message: text }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Assistant error");
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: data.reply ?? "" },
-      ]);
-      if (data.proposed_order) setProposed(data.proposed_order as ProposedOrder);
+      const data = await apiFetch<{ reply?: string; proposed_order?: ProposedOrder }>(
+        "/api/v1/agent/chat",
+        { method: "POST", body: { session_id: sessionId, message: text } },
+      );
+      setMessages((m) => [...m, { role: "assistant", content: data.reply ?? "" }]);
+      if (data.proposed_order) setProposed(data.proposed_order);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -62,25 +77,42 @@ export default function CustomerPage() {
 
   async function confirmOrder() {
     if (!proposed) return;
+    if (
+      orderType === "delivery" &&
+      (!delivery.name.trim() || !delivery.phone.trim() || !delivery.address.trim())
+    ) {
+      setError("Please fill in your name, phone, and delivery address.");
+      return;
+    }
     setSending(true);
     setError(null);
     try {
-      const res = await fetch(api("/api/v1/orders"), {
+      const placedOrder = await apiFetch<OrderWithItems>("/api/v1/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           source: "agent",
           session_id: sessionId,
+          order_type: orderType,
+          ...(orderType === "delivery" && {
+            customer_name: delivery.name.trim(),
+            customer_phone: delivery.phone.trim(),
+            address: delivery.address.trim(),
+          }),
           items: proposed.items.map((it) => ({
             menu_item_id: it.menu_item_id,
             quantity: it.quantity,
             ...(it.notes ? { notes: it.notes } : {}),
           })),
-        }),
+        },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Could not place order");
-      setPlaced(data as OrderWithItems);
+      setPlaced(placedOrder);
+      addToHistory({
+        id: placedOrder.id,
+        orderType: placedOrder.orderType,
+        placedAt: new Date().toISOString(),
+        totalCents: proposed.total_cents,
+        itemCount: proposed.items.reduce((s, it) => s + it.quantity, 0),
+      });
       setProposed(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not place order");
@@ -103,7 +135,16 @@ export default function CustomerPage() {
             </p>
           </div>
         </div>
-        <HomeLink />
+        <div className="flex items-center gap-3 text-sm">
+          <Link
+            href="/menu"
+            className="inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ClipboardList className="h-4 w-4" />
+            Menu
+          </Link>
+          <HomeLink />
+        </div>
       </div>
 
       <div
@@ -126,9 +167,20 @@ export default function CustomerPage() {
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
                 <span className="font-mono">#{placed.id.slice(0, 8)}</span> —{" "}
-                <span className="capitalize">{placed.status}</span>. We&apos;ll
-                get cooking right away.
+                <span className="capitalize">{placed.status}</span>.{" "}
+                {placed.orderType === "delivery"
+                  ? "Track your delivery below."
+                  : "We'll get cooking right away."}
               </p>
+              {placed.orderType === "delivery" && (
+                <Link
+                  href={`/track/${placed.id}`}
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                >
+                  <Bike className="h-4 w-4" />
+                  Track your order
+                </Link>
+              )}
             </Card>
           </div>
         )}
@@ -147,10 +199,7 @@ export default function CustomerPage() {
                       </span>{" "}
                       {it.name}
                       {it.notes ? (
-                        <span className="text-muted-foreground">
-                          {" "}
-                          — {it.notes}
-                        </span>
+                        <span className="text-muted-foreground"> — {it.notes}</span>
                       ) : null}
                     </span>
                     <span className="tabular-nums text-muted-foreground">
@@ -165,6 +214,58 @@ export default function CustomerPage() {
                   {formatPrice(proposed.total_cents)}
                 </span>
               </div>
+
+              {/* Fulfillment type */}
+              <div className="mt-4">
+                <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  How would you like it?
+                </div>
+                <div className="inline-flex w-full items-center gap-1 rounded-lg border border-border bg-muted/50 p-1">
+                  {ORDER_TYPE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setOrderType(opt.value)}
+                      className={cn(
+                        "flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                        orderType === opt.value
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {orderType === "delivery" && (
+                <div className="mt-3 space-y-2">
+                  <Input
+                    value={delivery.name}
+                    onChange={(e) =>
+                      setDelivery({ ...delivery, name: e.target.value })
+                    }
+                    placeholder="Your name"
+                  />
+                  <Input
+                    value={delivery.phone}
+                    onChange={(e) =>
+                      setDelivery({ ...delivery, phone: e.target.value })
+                    }
+                    placeholder="Phone number"
+                    inputMode="tel"
+                  />
+                  <Input
+                    value={delivery.address}
+                    onChange={(e) =>
+                      setDelivery({ ...delivery, address: e.target.value })
+                    }
+                    placeholder="Delivery address"
+                  />
+                </div>
+              )}
+
               <div className="mt-4 flex gap-2">
                 <Button onClick={confirmOrder} disabled={sending}>
                   <CheckCircle2 className="h-4 w-4" />
@@ -209,68 +310,5 @@ export default function CustomerPage() {
         </Button>
       </form>
     </main>
-  );
-}
-
-function Avatar({ role }: { role: "user" | "assistant" }) {
-  return (
-    <span
-      className={cn(
-        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-        role === "assistant"
-          ? "bg-primary/10 text-primary"
-          : "bg-foreground text-background",
-      )}
-    >
-      {role === "assistant" ? (
-        <Bot className="h-4 w-4" />
-      ) : (
-        <User className="h-4 w-4" />
-      )}
-    </span>
-  );
-}
-
-function ChatBubble({ role, content }: ChatMessage) {
-  const isUser = role === "user";
-  return (
-    <div
-      className={cn(
-        "animate-rise-in flex items-start gap-3",
-        isUser && "flex-row-reverse",
-      )}
-    >
-      <Avatar role={role} />
-      <div
-        className={cn(
-          "max-w-[80%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm shadow-sm",
-          isUser
-            ? "rounded-tr-sm bg-primary text-primary-foreground"
-            : "rounded-tl-sm border border-border bg-card text-card-foreground",
-        )}
-      >
-        {content}
-      </div>
-    </div>
-  );
-}
-
-function TypingBubble() {
-  return (
-    <div className="animate-rise-in flex items-start gap-3">
-      <Avatar role="assistant" />
-      <div className="flex gap-1 rounded-2xl rounded-tl-sm border border-border bg-card px-4 py-3.5">
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="h-1.5 w-1.5 rounded-full bg-muted-foreground"
-            style={{
-              animation: "typing-bounce 1.2s infinite",
-              animationDelay: `${i * 0.15}s`,
-            }}
-          />
-        ))}
-      </div>
-    </div>
   );
 }

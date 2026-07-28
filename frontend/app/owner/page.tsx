@@ -1,170 +1,171 @@
 "use client";
 
-import { LogOut, Package, Radio, Receipt, ShoppingBag } from "lucide-react";
-import { useOrders } from "@/lib/useOrders";
-import { useStaffKey } from "@/lib/useStaffKey";
-import { cn } from "@/lib/cn";
-import { StaffGate } from "../_components/StaffGate";
-import { formatPrice } from "@repo/shared";
-import { ORDER_STATUSES, type OrderStatus } from "@repo/shared";
-import { Card } from "../_components/ui/Card";
-import { EmptyState } from "../_components/ui/EmptyState";
-import { HomeLink, PageHeader } from "../_components/ui/PageHeader";
-import { Stat } from "../_components/ui/Stat";
-import { StatusPill } from "../_components/ui/StatusPill";
+import { useCallback, useEffect, useState } from "react";
+import { Package, Receipt, ShoppingBag, TrendingUp } from "lucide-react";
+import { formatPrice, type OrderStatus } from "@repo/shared";
+import { apiFetch } from "@/lib/api";
+import { useOwner } from "./OwnerShell";
+import { Card } from "@/app/_components/ui/Card";
+import { EmptyState } from "@/app/_components/ui/EmptyState";
+import { PageHeader } from "@/app/_components/ui/PageHeader";
+import { Skeleton } from "@/app/_components/ui/Skeleton";
+import { Stat } from "@/app/_components/ui/Stat";
+import { StatusPill } from "@/app/_components/ui/StatusPill";
+import { Tabs } from "@/app/_components/ui/Tabs";
+import {
+  RevenueLineChart,
+  type RevenuePoint,
+} from "@/app/_components/ui/charts/RevenueLineChart";
+import {
+  TopItemsBarChart,
+  type TopItemPoint,
+} from "@/app/_components/ui/charts/TopItemsBarChart";
 
-export default function OwnerPage() {
-  const { key, ready, save, clear } = useStaffKey();
-  if (!ready) return null;
-  if (!key) return <StaffGate title="Owner Dashboard" onSubmit={save} />;
-  return <OwnerBoard staffKey={key} onSignOut={clear} />;
+interface Analytics {
+  summary: {
+    revenueCents: number;
+    orderCount: number;
+    itemCount: number;
+    avgOrderCents: number;
+  };
+  statusCounts: { status: OrderStatus; count: number }[];
+  topItems: TopItemPoint[];
+  revenueOverTime: RevenuePoint[];
 }
 
-function OwnerBoard({
-  staffKey,
-  onSignOut,
-}: {
-  staffKey: string;
-  onSignOut: () => void;
-}) {
-  const { orders, error, loaded, live } = useOrders({
-    intervalMs: 3000,
-    staffKey,
-  });
+type RangeKey = "today" | "7d" | "30d" | "all";
 
-  const revenueCents = orders.reduce(
-    (sum, o) =>
-      sum + o.items.reduce((s, it) => s + it.unitPriceCents * it.quantity, 0),
-    0,
-  );
-  const statusCounts = ORDER_STATUSES.map((s) => ({
-    status: s,
-    count: orders.filter((o) => o.status === s).length,
-  }));
-  const totalItems = orders.reduce(
-    (n, o) => n + o.items.reduce((s, it) => s + it.quantity, 0),
-    0,
-  );
+const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "7d", label: "7 days" },
+  { value: "30d", label: "30 days" },
+  { value: "all", label: "All" },
+];
+
+function rangeFrom(key: RangeKey): string | undefined {
+  const now = new Date();
+  if (key === "today") {
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
+  }
+  if (key === "7d") return new Date(now.getTime() - 7 * 864e5).toISOString();
+  if (key === "30d") return new Date(now.getTime() - 30 * 864e5).toISOString();
+  return undefined;
+}
+
+export default function OwnerDashboardPage() {
+  const { staffKey } = useOwner();
+  const [range, setRange] = useState<RangeKey>("7d");
+  const [data, setData] = useState<Analytics | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoaded(false);
+    try {
+      const from = rangeFrom(range);
+      const qs = from ? `?from=${encodeURIComponent(from)}` : "";
+      setData(await apiFetch<Analytics>(`/api/v1/analytics${qs}`, { staffKey }));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load analytics");
+    } finally {
+      setLoaded(true);
+    }
+  }, [range, staffKey]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
+    <main className="flex-1">
       <PageHeader
-        title="Owner Dashboard"
-        subtitle="Live orders and daily totals"
-        icon={<Receipt className="h-5 w-5" />}
+        className="mt-6"
+        title="Dashboard"
+        subtitle="Sales and order analytics"
+        icon={<TrendingUp className="h-5 w-5" />}
         actions={
-          <>
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-                live
-                  ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
-                  : "bg-muted text-muted-foreground",
-              )}
-              title={live ? "Realtime (SSE) connected" : "Polling"}
-            >
-              <Radio className={cn("h-3.5 w-3.5", live && "animate-pulse")} />
-              {live ? "Live" : "Polling"}
-            </span>
-            <button
-              onClick={onSignOut}
-              className="inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </button>
-            <HomeLink />
-          </>
+          <Tabs
+            options={RANGE_OPTIONS}
+            value={range}
+            onChange={(v) => setRange(v)}
+          />
         }
       />
 
       {error && (
-        <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
-          {error}
-        </p>
+        <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">{error}</p>
       )}
 
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <Stat
-          label="Orders"
-          value={orders.length}
-          icon={<ShoppingBag className="h-4 w-4" />}
-        />
+      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat
           label="Revenue"
-          value={formatPrice(revenueCents)}
+          value={data ? formatPrice(data.summary.revenueCents) : "—"}
           icon={<Receipt className="h-4 w-4" />}
           accent
         />
         <Stat
+          label="Orders"
+          value={data ? data.summary.orderCount : "—"}
+          icon={<ShoppingBag className="h-4 w-4" />}
+        />
+        <Stat
           label="Items sold"
-          value={totalItems}
+          value={data ? data.summary.itemCount : "—"}
           icon={<Package className="h-4 w-4" />}
+        />
+        <Stat
+          label="Avg order"
+          value={data ? formatPrice(data.summary.avgOrderCents) : "—"}
+          icon={<TrendingUp className="h-4 w-4" />}
         />
       </div>
 
+      <div className="mt-4 grid gap-4 lg:grid-cols-5">
+        <Card className="p-5 lg:col-span-3">
+          <h2 className="text-sm font-semibold text-muted-foreground">
+            Revenue over time
+          </h2>
+          <div className="mt-3">
+            {!loaded ? (
+              <Skeleton className="h-64 w-full" />
+            ) : data && data.revenueOverTime.length > 0 ? (
+              <RevenueLineChart data={data.revenueOverTime} />
+            ) : (
+              <EmptyState
+                title="No sales in this range"
+                description="Try a wider date range."
+              />
+            )}
+          </div>
+        </Card>
+
+        <Card className="p-5 lg:col-span-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">
+            Top items
+          </h2>
+          <div className="mt-3">
+            {!loaded ? (
+              <Skeleton className="h-64 w-full" />
+            ) : data && data.topItems.length > 0 ? (
+              <TopItemsBarChart data={data.topItems} />
+            ) : (
+              <EmptyState title="No items sold yet" />
+            )}
+          </div>
+        </Card>
+      </div>
+
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {statusCounts.map((s) => (
-          <Card
-            key={s.status}
-            className="flex items-center justify-between p-3.5"
-          >
+        {(data?.statusCounts ?? []).map((s) => (
+          <Card key={s.status} className="flex items-center justify-between p-3.5">
             <StatusPill status={s.status} />
             <span className="text-lg font-bold tabular-nums">{s.count}</span>
           </Card>
         ))}
       </div>
-
-      <h2 className="mt-10 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Recent orders
-      </h2>
-
-      {loaded && orders.length === 0 ? (
-        <EmptyState
-          className="mt-4"
-          icon={<ShoppingBag className="h-6 w-6" />}
-          title="No orders yet"
-          description="Orders will appear here as customers place them."
-        />
-      ) : (
-        <Card className="mt-3 overflow-hidden p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-border bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-2.5 font-medium">Order</th>
-                  <th className="px-4 py-2.5 font-medium">Status</th>
-                  <th className="px-4 py-2.5 font-medium">Items</th>
-                  <th className="px-4 py-2.5 font-medium">Source</th>
-                  <th className="px-4 py-2.5 font-medium">Placed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr
-                    key={o.id}
-                    className="border-b border-border transition-colors last:border-0 hover:bg-muted/40"
-                  >
-                    <td className="px-4 py-2.5 font-mono text-muted-foreground">
-                      #{o.id.slice(0, 8)}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <StatusPill status={o.status as OrderStatus} />
-                    </td>
-                    <td className="px-4 py-2.5 tabular-nums">
-                      {o.items.reduce((s, it) => s + it.quantity, 0)}
-                    </td>
-                    <td className="px-4 py-2.5 capitalize">{o.source}</td>
-                    <td className="px-4 py-2.5 text-muted-foreground">
-                      {new Date(o.createdAt).toLocaleTimeString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
     </main>
   );
 }

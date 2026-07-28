@@ -19,8 +19,28 @@ workspace packages. What exists today:
   order via `POST /orders`; kitchen/owner poll (~2.5–3s). All calls go to the backend via
   `NEXT_PUBLIC_API_BASE_URL` (see `frontend/lib/api.ts`).
 
-**Deferred** (not yet built): SSE + `LISTEN/NOTIFY` realtime (Phase 5), auth/rate-limiting beyond
-a light in-memory throttle/load-testing (Phase 6).
+**UI expansion (post-v1, `feat/ui-expansion`).** A larger build-out beyond the original PRD scope,
+per an explicit request to make the UI less basic and add pages/endpoints:
+- **Menu admin** — `menu` CRUD (`POST` / `PATCH /:id` / `PATCH /:id/availability` / `DELETE /:id`,
+  staff-authed; delete defaults to soft-delete/`archived` because of the `order_items` FK). UI at
+  `/owner/menu`.
+- **Analytics** — `GET /api/v1/analytics?from=&to=` (server-side revenue/top-items/over-time/status
+  from the denormalized `order_items` snapshots). Owner dashboard uses **Recharts** + date range.
+- **Delivery + tracking** — `orders` gained `order_type` (`dine_in|delivery|pickup`) + delivery
+  columns (`customer_*`, `delivery_address`, `dest_lat/lng`, `eta_minutes`, `dispatched_at`,
+  `delivered_at`). `GET /orders/:id/tracking` (public), `POST /orders/:id/dispatch` + `/delivered`
+  (staff). Customer `/track/[id]` shows a **foodpanda-style SVG map** (no map lib) with a courier
+  interpolated along a shared route in `@repo/shared/tracking` — courier position is **computed**,
+  never stored. `menu_items` gained `archived` + `updated_at`.
+- **Kitchen** — kanban board (`received|preparing|ready`), order-age badges, new-order chime/toast;
+  `updateOrderStatus` now **enforces the `NEXT_STATUS` state machine** (illegal transition → 409).
+- **Frontend infra** — `apiFetch<T>()` wrapper in `lib/api.ts` (staff key + JSON + errors); a
+  `ToastProvider`; an expanded UI kit (`Badge/Tabs/Select/Table/Modal/Toast/Timeline/KanbanColumn/
+  Skeleton/charts`); loading/error/not-found boundaries; `/menu` browse + `/orders` history pages;
+  owner routes share one staff gate + subnav via `owner/OwnerShell.tsx` + `owner/layout.tsx`.
+
+**Deferred** (not yet built): auth/rate-limiting beyond a light in-memory throttle + load-testing
+(remainder of PRD §6). SSE + `LISTEN/NOTIFY` realtime is **built** (Phase 5).
 
 Deliberate choices worth knowing:
 - **`pg` (node-postgres), not `neon-http`** — the HTTP driver can't do transactions, which PRD §8
@@ -113,9 +133,9 @@ Full request/response shapes in PRD §7. The frontend never calls these relative
 
 ## Explicitly out of scope for v1
 
-No payments, no menu-editing/admin UI (menu is seeded manually into Neon), no reservations,
-no delivery tracking, no recommendation sub-agent, no multi-location. Don't build these unless
-asked (PRD §12).
+No payments, no reservations, no recommendation sub-agent, no multi-location. Don't build these
+unless asked (PRD §12). **Note:** menu-editing/admin UI and delivery tracking were originally
+out of scope but have since been built (see "UI expansion" above) at the user's request.
 
 ## Commands
 
