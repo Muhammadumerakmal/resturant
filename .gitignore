@@ -5,3 +5,6 @@ node_modules/
 dist/
 .DS_Store
 *.log
+
+# Local MCP config — contains secrets, never commit
+mcp.json
