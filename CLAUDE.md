@@ -4,10 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-This repo is **pre-implementation**. The only file is `PRD-restaurant-ai-agent-v2.md` — a
-detailed product spec for an AI-agent restaurant ordering system. No app has been scaffolded
-yet (no `package.json`, no source, no git repo). Treat the PRD as the source of truth for
-architecture decisions; when you scaffold code, update this file with the real commands.
+**Foundation built (PRD Phases 1–3).** A Next.js (App Router) + TypeScript + Tailwind app runs at
+the repo root, backed by live **Neon Postgres** via **Drizzle** (`pg`/node-postgres driver). What
+exists today:
+- DB schema + migration + seed (`db/`), 9 seeded menu items.
+- CRUD Route Handlers under `app/api/v1/` (`menu`, `orders` GET/POST, `orders/[id]`,
+  `orders/[id]/status`), all `zod`-validated, order creation wrapped in a single transaction.
+- Three UI shells (`app/customer`, `app/kitchen`, `app/owner`) that poll the API (~2.5–3s).
+
+**Deferred** (not yet built): the OpenAI agent + `/api/v1/agent/chat` (Phase 4), SSE +
+`LISTEN/NOTIFY` realtime (Phase 5), auth/rate-limiting/load-testing (Phase 6). The customer page
+is a manual order form standing in for the conversational agent until Phase 4.
+
+Two deliberate choices worth knowing:
+- **`pg` (node-postgres), not `neon-http`** — the HTTP driver can't do transactions, which PRD §8
+  requires for order writes. Routes set `runtime = "nodejs"`. `db/index.ts` reuses one pool.
+- **`order_items` also snapshots `unit_price_cents`** (a small extension of the §6.1 DDL) because
+  §6.2's own rationale calls out price changes; this makes owner revenue exact.
 
 ## What is being built
 
@@ -66,6 +79,16 @@ asked (PRD §12).
 
 ## Commands
 
-Not yet defined — the app hasn't been scaffolded. Once it is (Next.js + Drizzle), record here
-the real commands for: dev server, build, lint, running the test suite and a single test, and
-Drizzle migrate/generate/push. Follow the phased build order in PRD §11 when starting.
+- `npm run dev` — start the dev server (Turbopack) at http://localhost:3000
+- `npm run build` / `npm run start` — production build / serve
+- `npm run lint` — ESLint
+- `npm run db:generate` — generate a Drizzle migration from `db/schema.ts` into `db/migrations/`
+- `npm run db:migrate` — apply migrations to the DB in `DATABASE_URL`
+- `npm run db:seed` — seed menu items (idempotent; skips if `menu_items` is non-empty)
+- `npm run db:studio` — open Drizzle Studio
+
+**Env:** `.env.local` holds `DATABASE_URL` (Neon **pooled** connection string) and is gitignored.
+`drizzle.config.ts` and the `db:seed` script load it explicitly (drizzle-kit/tsx don't read Next's
+env automatically). No test suite exists yet.
+
+Follow the phased build order in PRD §11 for what comes next (agent → realtime → hardening).
