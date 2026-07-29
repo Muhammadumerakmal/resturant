@@ -7,6 +7,9 @@ import { authRouter } from "./auth.routes";
 import { reservationsRouter } from "./reservation.routes";
 import { customersRouter } from "./customer.routes";
 import { settingsRouter } from "./settings.routes";
+import { staffRouter } from "./staff.routes";
+import { reviewsRouter } from "./review.routes";
+import { promotionsRouter } from "./promotion.routes";
 
 // Mounts all v1 API routers under /api/v1.
 export const apiRouter = Router();
@@ -19,3 +22,6 @@ apiRouter.use("/auth", authRouter);
 apiRouter.use("/reservations", reservationsRouter);
 apiRouter.use("/customers", customersRouter);
 apiRouter.use("/settings", settingsRouter);
+apiRouter.use("/staff", staffRouter);
+apiRouter.use("/reviews", reviewsRouter);
+apiRouter.use("/promotions", promotionsRouter);

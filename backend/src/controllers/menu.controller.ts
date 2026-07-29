@@ -4,6 +4,7 @@ import {
   createMenuItemSchema,
   updateMenuItemSchema,
   setAvailabilitySchema,
+  setStockSchema,
   OrderError,
 } from "@repo/shared";
 import * as menuModel from "../models/menu.model";
@@ -76,6 +77,26 @@ export async function toggleAvailability(req: Request, res: Response) {
     return;
   }
   const item = await menuModel.setAvailability(id, parsed.data.available);
+  if (!item) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  res.json(item);
+}
+
+// PATCH /api/v1/menu/:id/stock { stock_quantity } -> MenuItem (staff)
+export async function setStock(req: Request, res: Response) {
+  const { id } = req.params;
+  if (!uuid.safeParse(id).success) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const parsed = setStockSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+    return;
+  }
+  const item = await menuModel.setStock(id, parsed.data.stock_quantity);
   if (!item) {
     res.status(404).json({ error: "Not found" });
     return;

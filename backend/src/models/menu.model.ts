@@ -73,6 +73,22 @@ export async function setAvailability(id: string, available: boolean) {
   return item ?? null;
 }
 
+// Inventory: set the stock level. null clears tracking (unlimited). A tracked
+// item at 0 is forced unavailable (reusing the order guard); restocking above 0
+// flips it back available so it returns to the menu automatically.
+export async function setStock(id: string, stockQuantity: number | null) {
+  const [item] = await db
+    .update(menuItems)
+    .set({
+      stockQuantity,
+      ...(stockQuantity !== null && { available: stockQuantity > 0 }),
+      updatedAt: new Date(),
+    })
+    .where(eq(menuItems.id, id))
+    .returning();
+  return item ?? null;
+}
+
 // Soft-delete: keep the row (past order_items still reference it) but hide + mark
 // unavailable. This is the default "delete" for the admin UI.
 export async function softDeleteMenuItem(id: string) {

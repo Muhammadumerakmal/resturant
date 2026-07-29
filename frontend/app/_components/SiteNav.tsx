@@ -11,6 +11,7 @@ import { Button } from "./ui/Button";
 const LINKS = [
   { href: "/menu", label: "Menu" },
   { href: "/reservations", label: "Reservations" },
+  { href: "/reviews", label: "Reviews" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];

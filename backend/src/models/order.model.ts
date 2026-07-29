@@ -70,10 +70,23 @@ export function createOrder(input: CreateOrderInput, userId?: string | null) {
       .where(inArray(menuItems.id, ids));
     const byId = new Map(menuRows.map((m) => [m.id, m]));
 
+    // Sum requested quantity per item — a menu item can appear in >1 line.
+    const qtyById = new Map<string, number>();
+    for (const it of items) {
+      qtyById.set(
+        it.menu_item_id,
+        (qtyById.get(it.menu_item_id) ?? 0) + it.quantity,
+      );
+    }
+
     for (const it of items) {
       const m = byId.get(it.menu_item_id);
       if (!m) throw new OrderError(`Menu item not found: ${it.menu_item_id}`);
       if (!m.available) throw new OrderError(`Item is unavailable: ${m.name}`);
+      // Inventory check for tracked items (stockQuantity !== null).
+      if (m.stockQuantity !== null && m.stockQuantity < (qtyById.get(m.id) ?? 0)) {
+        throw new OrderError(`Not enough stock for ${m.name}`);
+      }
     }
 
     const [order] = await tx
@@ -105,6 +118,17 @@ export function createOrder(input: CreateOrderInput, userId?: string | null) {
         })),
       )
       .returning();
+
+    // Decrement tracked inventory; auto-hide an item once it sells out. Runs in
+    // the same transaction so stock and the order commit atomically.
+    for (const m of menuRows) {
+      if (m.stockQuantity === null) continue;
+      const remaining = m.stockQuantity - (qtyById.get(m.id) ?? 0);
+      await tx
+        .update(menuItems)
+        .set({ stockQuantity: remaining, available: remaining > 0, updatedAt: new Date() })
+        .where(eq(menuItems.id, m.id));
+    }
 
     return { ...order, items: insertedItems };
   });

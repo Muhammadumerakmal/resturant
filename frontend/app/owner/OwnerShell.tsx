@@ -6,12 +6,16 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Bike,
+  Boxes,
   CalendarClock,
   ChefHat,
   LogOut,
   Radio,
   ScrollText,
   Settings,
+  Star,
+  Tag,
+  UserCog,
   Users,
   UtensilsCrossed,
 } from "lucide-react";
@@ -39,7 +43,11 @@ const NAV = [
   { href: "/owner/deliveries", label: "Deliveries", icon: Bike },
   { href: "/owner/menu", label: "Menu", icon: UtensilsCrossed },
   { href: "/owner/reservations", label: "Reservations", icon: CalendarClock },
+  { href: "/owner/inventory", label: "Inventory", icon: Boxes },
   { href: "/owner/customers", label: "Customers", icon: Users },
+  { href: "/owner/reviews", label: "Reviews", icon: Star },
+  { href: "/owner/promotions", label: "Promotions", icon: Tag },
+  { href: "/owner/staff", label: "Staff", icon: UserCog },
   // /kitchen lives outside /owner (its own StaffGate) — a convenience link.
   { href: "/kitchen", label: "Kitchen", icon: ChefHat },
   { href: "/owner/settings", label: "Settings", icon: Settings },
