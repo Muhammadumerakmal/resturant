@@ -66,16 +66,208 @@ const MENU = [
     category: "dessert",
     tags: ["vegetarian", "gluten-free"],
   },
+
+  // ── International expansion ──────────────────────────────────────────────
+  // Starters
+  {
+    name: "Bruschetta",
+    description: "Toasted sourdough with tomato, basil and olive oil",
+    priceCents: 650,
+    category: "starter",
+    tags: ["vegetarian"],
+  },
+  {
+    name: "Spring Rolls",
+    description: "Crispy vegetable rolls with sweet chili dip",
+    priceCents: 600,
+    category: "starter",
+    tags: ["vegetarian"],
+  },
+  {
+    name: "Hummus & Pita",
+    description: "Creamy chickpea hummus with warm pita bread",
+    priceCents: 700,
+    category: "starter",
+    tags: ["vegetarian"],
+  },
+  {
+    name: "Buffalo Chicken Wings",
+    description: "Spicy fried wings tossed in hot sauce with blue cheese dip",
+    priceCents: 900,
+    category: "starter",
+    tags: ["spicy"],
+  },
+
+  // Mains
+  {
+    name: "Margherita Pizza",
+    description: "Wood-fired pizza with mozzarella, tomato and fresh basil",
+    priceCents: 1200,
+    category: "main",
+    tags: ["vegetarian"],
+  },
+  {
+    name: "Spaghetti Carbonara",
+    description: "Pasta in a creamy egg sauce with pancetta and pecorino",
+    priceCents: 1400,
+    category: "main",
+    tags: [],
+  },
+  {
+    name: "Classic Beef Burger",
+    description: "Grilled beef patty, cheddar, lettuce and tomato in a brioche bun",
+    priceCents: 1350,
+    category: "main",
+    tags: [],
+  },
+  {
+    name: "Chicken Shawarma Plate",
+    description: "Marinated chicken with garlic sauce, pickles and flatbread",
+    priceCents: 1250,
+    category: "main",
+    tags: ["spicy"],
+  },
+  {
+    name: "Pad Thai",
+    description: "Stir-fried rice noodles with peanuts, egg and tamarind",
+    priceCents: 1300,
+    category: "main",
+    tags: ["spicy"],
+  },
+  {
+    name: "Grilled Salmon",
+    description: "Atlantic salmon fillet with lemon butter and greens",
+    priceCents: 1800,
+    category: "main",
+    tags: ["gluten-free"],
+  },
+  {
+    name: "Fish & Chips",
+    description: "Beer-battered cod with thick-cut fries and tartar sauce",
+    priceCents: 1500,
+    category: "main",
+    tags: [],
+  },
+  {
+    name: "Chicken Fajitas",
+    description: "Sizzling chicken with peppers, onions and warm tortillas",
+    priceCents: 1450,
+    category: "main",
+    tags: ["spicy"],
+  },
+
+  // Sides
+  {
+    name: "French Fries",
+    description: "Golden crispy fries with a pinch of sea salt",
+    priceCents: 450,
+    category: "side",
+    tags: ["vegetarian"],
+  },
+  {
+    name: "Garden Salad",
+    description: "Mixed greens, cucumber and tomato with vinaigrette",
+    priceCents: 550,
+    category: "side",
+    tags: ["vegetarian", "gluten-free"],
+  },
+  {
+    name: "Steamed Rice",
+    description: "Fluffy long-grain basmati rice",
+    priceCents: 300,
+    category: "side",
+    tags: ["vegetarian", "gluten-free"],
+  },
+  {
+    name: "Coleslaw",
+    description: "Crunchy cabbage and carrot in a creamy dressing",
+    priceCents: 400,
+    category: "side",
+    tags: ["vegetarian", "gluten-free"],
+  },
+
+  // Desserts
+  {
+    name: "Tiramisu",
+    description: "Espresso-soaked ladyfingers with mascarpone cream",
+    priceCents: 700,
+    category: "dessert",
+    tags: ["vegetarian"],
+  },
+  {
+    name: "Chocolate Lava Cake",
+    description: "Warm molten chocolate cake with a soft center",
+    priceCents: 750,
+    category: "dessert",
+    tags: ["vegetarian"],
+  },
+  {
+    name: "New York Cheesecake",
+    description: "Rich baked cheesecake with a graham cracker crust",
+    priceCents: 700,
+    category: "dessert",
+    tags: ["vegetarian"],
+  },
+  {
+    name: "Ice Cream Sundae",
+    description: "Vanilla ice cream with chocolate sauce and nuts",
+    priceCents: 550,
+    category: "dessert",
+    tags: ["vegetarian", "gluten-free"],
+  },
+
+  // Drinks
+  {
+    name: "Fresh Lemonade",
+    description: "House-made lemonade with a hint of mint",
+    priceCents: 350,
+    category: "drink",
+    tags: ["vegetarian", "gluten-free"],
+  },
+  {
+    name: "Iced Coffee",
+    description: "Chilled brewed coffee over ice",
+    priceCents: 400,
+    category: "drink",
+    tags: ["vegetarian", "gluten-free"],
+  },
+  {
+    name: "Coca-Cola",
+    description: "Classic chilled soft drink",
+    priceCents: 250,
+    category: "drink",
+    tags: ["vegetarian", "gluten-free"],
+  },
+  {
+    name: "Green Tea",
+    description: "Hot brewed green tea",
+    priceCents: 300,
+    category: "drink",
+    tags: ["vegetarian", "gluten-free"],
+  },
+  {
+    name: "Orange Juice",
+    description: "Freshly squeezed orange juice",
+    priceCents: 400,
+    category: "drink",
+    tags: ["vegetarian", "gluten-free"],
+  },
 ];
 
 async function seedMenu() {
-  const existing = await db.select({ id: menuItems.id }).from(menuItems).limit(1);
-  if (existing.length > 0) {
-    console.log("Menu already seeded — skipping. (Clear menu_items to re-seed.)");
+  // Additive + idempotent: insert only items not already present (matched by
+  // name). Lets `db:seed` top up an already-populated DB with new dishes, and
+  // stays safe to re-run. (There's no unique constraint on name; matching by
+  // name is a pragmatic key that avoids a migration.)
+  const existing = await db.select({ name: menuItems.name }).from(menuItems);
+  const existingNames = new Set(existing.map((row) => row.name));
+  const missing = MENU.filter((item) => !existingNames.has(item.name));
+  if (missing.length === 0) {
+    console.log("Menu up to date — nothing to add.");
     return;
   }
-  const inserted = await db.insert(menuItems).values(MENU).returning({ id: menuItems.id });
-  console.log(`Seeded ${inserted.length} menu items.`);
+  const inserted = await db.insert(menuItems).values(missing).returning({ id: menuItems.id });
+  console.log(`Added ${inserted.length} menu items.`);
 }
 
 async function seedSettings() {
