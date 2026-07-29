@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { createOrderSchema, patchStatusSchema, OrderError } from "@repo/shared";
 import * as orderModel from "../models/order.model";
+import * as userModel from "../models/user.model";
 
 const uuid = z.string().uuid();
 
@@ -24,7 +25,9 @@ export async function createOrder(req: Request, res: Response) {
   }
 
   try {
-    const created = await orderModel.createOrder(parsed.data);
+    // attachCustomer (soft) may have set req.userId — link the order to the
+    // signed-in customer so it shows in their history.
+    const created = await orderModel.createOrder(parsed.data, req.userId ?? null);
     res.status(201).json(created);
   } catch (err) {
     if (err instanceof OrderError) {
@@ -34,6 +37,17 @@ export async function createOrder(req: Request, res: Response) {
     console.error("POST /orders failed:", err);
     res.status(500).json({ error: "Internal error" });
   }
+}
+
+// GET /api/v1/orders/mine -> the logged-in customer's own orders (requireCustomer)
+export async function listMyOrders(req: Request, res: Response) {
+  const user = req.userId ? await userModel.findById(req.userId) : null;
+  if (!user) {
+    res.status(401).json({ error: "Sign in required" });
+    return;
+  }
+  const rows = await orderModel.listOrdersForUser(user.id, user.phone);
+  res.json(rows);
 }
 
 // GET /api/v1/orders/:id -> Order (with items) (staff)

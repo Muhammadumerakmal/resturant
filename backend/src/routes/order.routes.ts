@@ -2,6 +2,10 @@ import { Router } from "express";
 import * as orderController from "../controllers/order.controller";
 import * as trackingController from "../controllers/tracking.controller";
 import { requireStaff, requireStaffQuery } from "../middlewares/auth.middleware";
+import {
+  attachCustomer,
+  requireCustomer,
+} from "../middlewares/customerAuth.middleware";
 import { ordersStream } from "../realtime/orderListener";
 
 export const ordersRouter = Router();
@@ -10,8 +14,13 @@ export const ordersRouter = Router();
 // isn't captured as an id. Staff-only; EventSource auths via ?key=.
 ordersRouter.get("/stream", requireStaffQuery, ordersStream);
 
+// A customer's own orders — declared before "/:id" so "mine" isn't read as an id.
+ordersRouter.get("/mine", requireCustomer, orderController.listMyOrders);
+
 ordersRouter.get("/", requireStaff, orderController.listOrders);
-ordersRouter.post("/", orderController.createOrder);
+// Public order creation, but soft-attach the customer so a signed-in user's
+// order is linked to their account (attachCustomer never blocks guests).
+ordersRouter.post("/", attachCustomer, orderController.createOrder);
 
 // Delivery tracking. GET tracking is public (customers track their own order);
 // dispatch/deliver are staff-only. Sub-paths declared before "/:id".

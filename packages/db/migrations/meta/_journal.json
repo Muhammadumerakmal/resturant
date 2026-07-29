@@ -15,6 +15,13 @@
       "when": 1785253122886,
       "tag": "0001_loud_zaran",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785306925228,
+      "tag": "0002_absent_vulture",
+      "breakpoints": true
     }
   ]
 }

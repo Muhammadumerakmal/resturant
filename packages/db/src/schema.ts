@@ -30,12 +30,32 @@ export const menuItems = pgTable("menu_items", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Customer accounts (best-practice auth: hashed passwords, never plaintext).
+// Distinct from the staff API key, which stays a shared env secret.
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull().unique(),
+    passwordHash: text("password_hash").notNull(),
+    name: text("name").notNull(),
+    // Optional; lets us also match legacy phone-based delivery orders to a user.
+    phone: text("phone"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_users_email").on(t.email)],
+);
+
 export const orders = pgTable(
   "orders",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     status: text("status").notNull().default("received"), // received|preparing|ready|served
     source: text("source").notNull().default("agent"), // agent|manual
+    // Set when a logged-in customer places the order, so their history is
+    // authoritative (nullable: guest / agent / manual orders have none).
+    userId: uuid("user_id").references(() => users.id),
     // Fulfillment type. Delivery orders carry customer/destination fields and a
     // delivery lifecycle derived from status + dispatchedAt/deliveredAt.
     orderType: text("order_type").notNull().default("dine_in"), // dine_in|delivery|pickup
@@ -96,3 +116,42 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
     references: [orders.id],
   }),
 }));
+
+// Table bookings submitted from the public site; staff review + set status.
+export const reservations = pgTable(
+  "reservations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    phone: text("phone").notNull(),
+    email: text("email"),
+    partySize: integer("party_size").notNull(),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull(),
+    status: text("status").notNull().default("pending"), // pending|confirmed|seated|cancelled
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_reservations_requested_at").on(t.requestedAt),
+    check("reservations_party_positive", sql`${t.partySize} > 0`),
+    check(
+      "reservations_status_valid",
+      sql`${t.status} in ('pending', 'confirmed', 'seated', 'cancelled')`,
+    ),
+  ],
+);
+
+// Single-row restaurant profile shown on the public site + edited in owner
+// settings. The model layer always reads/writes the first row.
+export const restaurantSettings = pgTable("restaurant_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  tagline: text("tagline"),
+  phone: text("phone"),
+  email: text("email"),
+  address: text("address"),
+  hours: text("hours"),
+  // A non-sensitive reminder only — the real staff key is an env secret.
+  staffKeyHint: text("staff_key_hint"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

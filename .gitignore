@@ -41,3 +41,6 @@ next-env.d.ts
 
 # Local MCP config — contains secrets, never commit
 mcp.json
+
+# local scratch (contains staff key) — never commit
+imp.txt

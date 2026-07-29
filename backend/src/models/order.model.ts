@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@repo/db";
 import { orders, orderItems, menuItems } from "@repo/db/schema";
 import {
@@ -28,10 +28,24 @@ export function findOrderById(id: string) {
   });
 }
 
+// A logged-in customer's own orders: those placed while authenticated (userId)
+// plus any delivery orders matching a phone they registered with, newest first.
+export async function listOrdersForUser(userId: string, phone?: string | null) {
+  const match = phone
+    ? or(eq(orders.userId, userId), eq(orders.customerPhone, phone))
+    : eq(orders.userId, userId);
+  return db.query.orders.findMany({
+    where: match,
+    with: { items: true },
+    orderBy: desc(orders.createdAt),
+    limit: 100,
+  });
+}
+
 // Creates the order and its items in a single transaction (PRD §8) — no partial
 // orders. Throws OrderError for invalid/unavailable items so the controller can
 // map it to a 400.
-export function createOrder(input: CreateOrderInput) {
+export function createOrder(input: CreateOrderInput, userId?: string | null) {
   const { items, session_id, source, order_type } = input;
   const isDelivery = order_type === "delivery";
 
@@ -54,6 +68,7 @@ export function createOrder(input: CreateOrderInput) {
       .values({
         source: source ?? "manual",
         sessionId: session_id ?? null,
+        userId: userId ?? null,
         orderType: order_type ?? "dine_in",
         // Delivery details only apply to delivery orders (validated upstream).
         customerName: isDelivery ? (input.customer_name ?? null) : null,

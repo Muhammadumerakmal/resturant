@@ -82,6 +82,49 @@ export const statsQuerySchema = z.object({
   to: z.string().datetime().optional(),
 });
 
+// --- Customer auth --------------------------------------------------------
+export const signupSchema = z.object({
+  email: z.string().email().max(200),
+  password: z.string().min(8, "Password must be at least 8 characters").max(200),
+  name: z.string().min(1).max(120),
+  phone: z.string().min(3).max(40).optional(),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email().max(200),
+  password: z.string().min(1).max(200),
+});
+
+// --- Reservations ---------------------------------------------------------
+export const createReservationSchema = z.object({
+  name: z.string().min(1).max(120),
+  phone: z.string().min(3).max(40),
+  email: z.string().email().max(200).optional(),
+  party_size: z.number().int().positive().max(50),
+  requested_at: z.string().datetime(),
+  notes: z.string().max(500).optional(),
+});
+
+export const updateReservationStatusSchema = z.object({
+  status: z.enum(["pending", "confirmed", "seated", "cancelled"]),
+});
+
+// --- Restaurant settings (owner) ------------------------------------------
+export const updateSettingsSchema = z
+  .object({
+    name: z.string().min(1).max(160),
+    tagline: z.string().max(300),
+    phone: z.string().max(60),
+    email: z.string().email().max(200),
+    address: z.string().max(400),
+    hours: z.string().max(300),
+    staff_key_hint: z.string().max(200),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, {
+    message: "Provide at least one field to update",
+  });
+
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type PatchStatusInput = z.infer<typeof patchStatusSchema>;
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
@@ -89,3 +132,8 @@ export type UpdateMenuItemInput = z.infer<typeof updateMenuItemSchema>;
 export type SetAvailabilityInput = z.infer<typeof setAvailabilitySchema>;
 export type DispatchInput = z.infer<typeof dispatchSchema>;
 export type StatsQueryInput = z.infer<typeof statsQuerySchema>;
+export type SignupInput = z.infer<typeof signupSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type CreateReservationInput = z.infer<typeof createReservationSchema>;
+export type UpdateReservationStatusInput = z.infer<typeof updateReservationStatusSchema>;
+export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;

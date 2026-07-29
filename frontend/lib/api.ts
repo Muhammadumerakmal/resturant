@@ -26,9 +26,10 @@ export async function apiFetch<T = unknown>(
     staffKey?: string;
     signal?: AbortSignal;
     cache?: RequestCache;
+    credentials?: RequestCredentials;
   } = {},
 ): Promise<T> {
-  const { method = "GET", body, staffKey, signal, cache } = opts;
+  const { method = "GET", body, staffKey, signal, cache, credentials } = opts;
 
   const headers: Record<string, string> = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -40,6 +41,8 @@ export async function apiFetch<T = unknown>(
     body: body !== undefined ? JSON.stringify(body) : undefined,
     signal,
     cache: cache ?? "no-store",
+    // Always send the auth cookie (httpOnly JWT) unless a caller opts out.
+    credentials: credentials ?? "include",
   });
 
   // 204 / empty body

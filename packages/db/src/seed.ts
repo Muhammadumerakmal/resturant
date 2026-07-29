@@ -1,6 +1,6 @@
 // Run with: npm run db:seed  (loads .env.local via tsx --env-file)
 import { db } from "./index";
-import { menuItems } from "./schema";
+import { menuItems, restaurantSettings } from "./schema";
 
 const MENU = [
   {
@@ -68,7 +68,7 @@ const MENU = [
   },
 ];
 
-async function main() {
+async function seedMenu() {
   const existing = await db.select({ id: menuItems.id }).from(menuItems).limit(1);
   if (existing.length > 0) {
     console.log("Menu already seeded — skipping. (Clear menu_items to re-seed.)");
@@ -76,6 +76,31 @@ async function main() {
   }
   const inserted = await db.insert(menuItems).values(MENU).returning({ id: menuItems.id });
   console.log(`Seeded ${inserted.length} menu items.`);
+}
+
+async function seedSettings() {
+  const existing = await db
+    .select({ id: restaurantSettings.id })
+    .from(restaurantSettings)
+    .limit(1);
+  if (existing.length > 0) {
+    console.log("Settings already seeded — skipping.");
+    return;
+  }
+  await db.insert(restaurantSettings).values({
+    name: "Tavola",
+    tagline: "Modern Indian kitchen — order, dine, deliver.",
+    phone: "+1 (555) 012-3456",
+    email: "hello@tavola.example",
+    address: "123 Saffron Street, Springfield",
+    hours: "Mon–Sun · 11:00 – 23:00",
+  });
+  console.log("Seeded restaurant settings row.");
+}
+
+async function main() {
+  await seedMenu();
+  await seedSettings();
 }
 
 main()
