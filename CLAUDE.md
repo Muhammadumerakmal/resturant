@@ -39,7 +39,28 @@ per an explicit request to make the UI less basic and add pages/endpoints:
   Skeleton/charts`); loading/error/not-found boundaries; `/menu` browse + `/orders` history pages;
   owner routes share one staff gate + subnav via `owner/OwnerShell.tsx` + `owner/layout.tsx`.
 
-**Deferred** (not yet built): auth/rate-limiting beyond a light in-memory throttle + load-testing
+**Customer accounts + public website + more owner pages (`feat/auth-website-owner-pages`).**
+A "proper website" build on top of the above:
+- **Customer auth (real, not the staff key)** — `users` table; `POST /auth/{signup,login,logout}` +
+  `GET /auth/me` with **bcryptjs**-hashed passwords and a **jose** HS256 JWT in an **httpOnly cookie**
+  (`SameSite=None; Secure` in prod for the split-domain deploy, `Lax` in dev). `requireCustomer` /
+  `attachCustomer` middlewares; `GET /orders/mine` returns the signed-in user's orders (orders gained
+  nullable `user_id`). Frontend `AuthProvider`/`useAuth` (`lib/AuthContext.tsx`) + `/login` `/signup`;
+  `/orders` now shows account orders when signed in, guest localStorage otherwise. `apiFetch` sends
+  `credentials:"include"`; CORS is `credentials:true` + a comma-separated `corsOrigins` allowlist.
+- **Reservations** — `reservations` table; `POST /reservations` (public) + `GET` / `PATCH /:id/status`
+  (staff). Public `/reservations` booking page.
+- **Customers** (read model, no table) — `GET /customers` + `/customers/:phone/orders` aggregate
+  delivery orders by phone (staff). Owner `/owner/customers`.
+- **Settings** — single-row `restaurant_settings` table; `GET /settings` (public) + `PATCH` (staff).
+  Owner `/owner/settings`; the public site reads name/tagline/contact from it.
+- **Owner subnav** gained Deliveries (`/owner/deliveries` — dispatch/deliver + reuses `DeliveryMap`),
+  Customers, a Kitchen link, and Settings (all in the `NAV` array in `owner/OwnerShell.tsx`).
+- **Public website** — marketing landing (revamped `app/page.tsx`), `/about`, `/contact`, shared
+  auth-aware `SiteNav`. New deps are pure-JS (`bcryptjs`/`jose`/`cookie-parser`) so the Vercel esbuild
+  bundle stays native-addon-free.
+
+**Deferred** (not yet built): rate-limiting beyond a light in-memory throttle + load-testing
 (remainder of PRD §6). SSE + `LISTEN/NOTIFY` realtime is **built** (Phase 5).
 
 Deliberate choices worth knowing:
@@ -150,8 +171,10 @@ Run from the repo root (they fan out through Turborepo / npm workspaces):
 
 **Env — two files, both gitignored:**
 - `backend/.env` — `DATABASE_URL` (Neon **pooled**), `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY`
-  (any OpenAI-compatible, tool-calling endpoint), `PORT`, `CORS_ORIGIN`. Backend loads it via
-  `tsx --env-file`; `packages/db` tooling loads it via `../../backend/.env`.
+  (any OpenAI-compatible, tool-calling endpoint), `PORT`, `CORS_ORIGIN` (comma-separated allowlist),
+  `STAFF_API_KEY`, and `JWT_SECRET` (customer-auth cookie signing — has a dev fallback, but **must**
+  be set in prod/Vercel). Backend loads it via `tsx --env-file`; `packages/db` tooling loads it via
+  `../../backend/.env`.
 - `frontend/.env.local` — `NEXT_PUBLIC_API_BASE_URL` (the backend URL). No secrets.
 
 No test suite yet.
