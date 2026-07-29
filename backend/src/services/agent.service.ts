@@ -62,3 +62,25 @@ export async function chat(sessionId: string, message: string): Promise<AgentRep
 
   return { reply, proposed_order, needs_clarification };
 }
+
+// --- Owner analytics assistant ----------------------------------------------
+// Separate ephemeral session store + agent for the staff-only owner section.
+// Read-only (never proposes/commits orders), so the reply is just text.
+const ownerSessions = new Map<string, AgentInputItem[]>();
+
+export async function ownerChat(
+  sessionId: string,
+  message: string,
+): Promise<{ reply: string }> {
+  const history = ownerSessions.get(sessionId) ?? [];
+  const input: AgentInputItem[] = [...history, user(message)];
+
+  const result = await run(ownerAgent, input);
+  ownerSessions.set(sessionId, result.history);
+
+  const reply =
+    typeof result.finalOutput === "string"
+      ? result.finalOutput
+      : String(result.finalOutput ?? "");
+  return { reply };
+}

@@ -13,6 +13,7 @@ import {
   Radio,
   ScrollText,
   Settings,
+  Sparkles,
   Star,
   Tag,
   UserCog,
@@ -39,6 +40,7 @@ export function useOwner() {
 
 const NAV = [
   { href: "/owner", label: "Dashboard", icon: BarChart3 },
+  { href: "/owner/assistant", label: "Assistant", icon: Sparkles },
   { href: "/owner/orders", label: "Orders", icon: ScrollText },
   { href: "/owner/deliveries", label: "Deliveries", icon: Bike },
   { href: "/owner/menu", label: "Menu", icon: UtensilsCrossed },
