@@ -3,7 +3,17 @@
 import { createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, LogOut, Radio, ScrollText, UtensilsCrossed } from "lucide-react";
+import {
+  BarChart3,
+  Bike,
+  ChefHat,
+  LogOut,
+  Radio,
+  ScrollText,
+  Settings,
+  Users,
+  UtensilsCrossed,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useStaffKey } from "@/lib/useStaffKey";
 import { StaffGate } from "../_components/StaffGate";
@@ -25,7 +35,12 @@ export function useOwner() {
 const NAV = [
   { href: "/owner", label: "Dashboard", icon: BarChart3 },
   { href: "/owner/orders", label: "Orders", icon: ScrollText },
+  { href: "/owner/deliveries", label: "Deliveries", icon: Bike },
   { href: "/owner/menu", label: "Menu", icon: UtensilsCrossed },
+  { href: "/owner/customers", label: "Customers", icon: Users },
+  // /kitchen lives outside /owner (its own StaffGate) — a convenience link.
+  { href: "/kitchen", label: "Kitchen", icon: ChefHat },
+  { href: "/owner/settings", label: "Settings", icon: Settings },
 ];
 
 // Single staff gate for the whole /owner section, plus the shared subnav. Owner
