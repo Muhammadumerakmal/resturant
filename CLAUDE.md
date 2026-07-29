@@ -156,4 +156,14 @@ Run from the repo root (they fan out through Turborepo / npm workspaces):
 
 No test suite yet.
 
+## Deploying the backend to Vercel
+
+The backend deploys as a single esbuild-bundled function via the Vercel Build
+Output API — **not** `@vercel/node` on the raw `.ts` (it can't transpile the
+source-only `@repo/*` packages) and **not** the Express framework preset (it
+builds a competing, broken function). Driven by `backend/vercel.json`
+(`framework: null` + `buildCommand: npm run vercel-build`) and
+`backend/scripts/build.mjs`. See **`backend/VERCEL_DEPLOYMENT.md`** for the full
+error/fix writeup, the required env vars, and how to verify a deploy.
+
 Follow the phased build order in PRD §11 for what comes next (realtime → hardening).
