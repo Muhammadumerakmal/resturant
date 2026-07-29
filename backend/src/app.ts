@@ -14,6 +14,14 @@ export function createApp() {
   app.use(express.json());
   app.use("/api/", rateLimit);
 
+  app.get("/", (_req, res) => {
+    res.json({
+      service: "restaurant-ai-agent backend",
+      health: "/health",
+      api: "/api/v1",
+    });
+  });
+
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
   });
