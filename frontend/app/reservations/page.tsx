@@ -1,17 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarClock, PartyPopper } from "lucide-react";
+import type { Reservation, ReservationStatus } from "@repo/shared";
 import { apiFetch, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
+import { Badge } from "../_components/ui/Badge";
 import { Button } from "../_components/ui/Button";
 import { Card } from "../_components/ui/Card";
 import { Input } from "../_components/ui/Input";
 import { PageHeader } from "../_components/ui/PageHeader";
 import { Select, Textarea } from "../_components/ui/Select";
+import { Skeleton } from "../_components/ui/Skeleton";
 import { SiteNav } from "../_components/SiteNav";
 
+const STATUS_TONE: Record<
+  ReservationStatus,
+  "warning" | "success" | "info" | "danger"
+> = {
+  pending: "warning",
+  confirmed: "success",
+  seated: "info",
+  cancelled: "danger",
+};
+
 export default function ReservationsPage() {
+  const { user, ready } = useAuth();
+  const [mine, setMine] = useState<Reservation[] | null>(null);
+
+  const loadMine = useCallback(() => {
+    if (!user) {
+      setMine(null);
+      return;
+    }
+    apiFetch<Reservation[]>("/api/v1/reservations/mine")
+      .then(setMine)
+      .catch(() => setMine([]));
+  }, [user]);
+
+  useEffect(() => {
+    if (ready) loadMine();
+  }, [ready, loadMine]);
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -44,6 +75,7 @@ export default function ReservationsPage() {
         },
       });
       setDone(true);
+      loadMine(); // reflect the new booking in "Your reservations"
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't submit — try again.");
       setBusy(false);
@@ -136,6 +168,46 @@ export default function ReservationsPage() {
               </Button>
             </form>
           </Card>
+        )}
+
+        {ready && user && (
+          <section className="mt-10">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Your reservations
+            </h2>
+            {mine === null ? (
+              <Skeleton className="mt-3 h-24 w-full" />
+            ) : mine.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                No bookings yet. Request a table above and it&apos;ll show here.
+              </p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                {mine.map((r) => (
+                  <Card
+                    key={r.id}
+                    className="flex items-center justify-between gap-3 p-4"
+                  >
+                    <div>
+                      <div className="font-medium">
+                        {new Date(r.requestedAt).toLocaleString([], {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        Party of {r.partySize}
+                        {r.notes ? ` · ${r.notes}` : ""}
+                      </div>
+                    </div>
+                    <Badge tone={STATUS_TONE[r.status as ReservationStatus]}>
+                      {r.status}
+                    </Badge>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
         )}
       </main>
     </>

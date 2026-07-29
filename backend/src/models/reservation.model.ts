@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@repo/db";
 import { reservations } from "@repo/db/schema";
 import type {
@@ -11,10 +11,12 @@ import type {
 
 export async function createReservation(
   input: CreateReservationInput,
+  userId: string | null = null,
 ): Promise<Reservation> {
   const [row] = await db
     .insert(reservations)
     .values({
+      userId,
       name: input.name,
       phone: input.phone,
       email: input.email ?? null,
@@ -31,6 +33,14 @@ export function listReservations(opts: { status?: string; limit: number }) {
     where: opts.status ? eq(reservations.status, opts.status) : undefined,
     orderBy: asc(reservations.requestedAt),
     limit: opts.limit,
+  });
+}
+
+// A signed-in customer's own bookings, newest requested first.
+export function listReservationsForUser(userId: string) {
+  return db.query.reservations.findMany({
+    where: eq(reservations.userId, userId),
+    orderBy: desc(reservations.requestedAt),
   });
 }
 

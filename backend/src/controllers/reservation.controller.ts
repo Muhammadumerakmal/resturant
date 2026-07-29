@@ -15,8 +15,23 @@ export async function createReservation(req: Request, res: Response) {
     res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
     return;
   }
-  const created = await reservationModel.createReservation(parsed.data);
+  // Soft-attached by attachCustomer: links the booking to a signed-in account,
+  // but guests (no userId) can still book.
+  const created = await reservationModel.createReservation(
+    parsed.data,
+    req.userId ?? null,
+  );
   res.status(201).json(created);
+}
+
+// GET /api/v1/reservations/mine -> Reservation[] (signed-in customer)
+export async function listMyReservations(req: Request, res: Response) {
+  if (!req.userId) {
+    res.status(401).json({ error: "Sign in required" });
+    return;
+  }
+  const rows = await reservationModel.listReservationsForUser(req.userId);
+  res.json(rows);
 }
 
 // GET /api/v1/reservations?status=&limit= -> Reservation[] (staff)

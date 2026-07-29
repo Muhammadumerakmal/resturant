@@ -122,6 +122,8 @@ export const reservations = pgTable(
   "reservations",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    // Nullable: guests can book without an account; signed-in bookings link here.
+    userId: uuid("user_id").references(() => users.id),
     name: text("name").notNull(),
     phone: text("phone").notNull(),
     email: text("email"),
