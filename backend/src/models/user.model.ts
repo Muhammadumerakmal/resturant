@@ -37,3 +37,34 @@ export async function createUser(input: {
     .returning();
   return row;
 }
+
+// Profile edit from the Account page. Only provided fields change. Returns the
+// updated row, or null if the id doesn't exist.
+export async function updateUser(
+  id: string,
+  input: { name?: string; phone?: string; defaultAddress?: string },
+): Promise<User | null> {
+  const [row] = await db
+    .update(users)
+    .set({
+      ...(input.name !== undefined && { name: input.name }),
+      ...(input.phone !== undefined && { phone: input.phone }),
+      ...(input.defaultAddress !== undefined && {
+        defaultAddress: input.defaultAddress,
+      }),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, id))
+    .returning();
+  return row ?? null;
+}
+
+export async function updatePassword(
+  id: string,
+  passwordHash: string,
+): Promise<void> {
+  await db
+    .update(users)
+    .set({ passwordHash, updatedAt: new Date() })
+    .where(eq(users.id, id));
+}

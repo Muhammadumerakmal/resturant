@@ -124,9 +124,11 @@ export default function OrderHistoryPage() {
         <div className="mt-6 space-y-3">
           {rows.map((e) => (
             <Card key={e.id} className="flex items-center justify-between p-4">
-              <div>
+              <Link href={`/orders/${e.id}`} className="group flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm">#{e.id.slice(0, 8)}</span>
+                  <span className="font-mono text-sm group-hover:underline">
+                    #{e.id.slice(0, 8)}
+                  </span>
                   {e.isDelivery && (
                     <Badge tone="info">
                       <Bike className="h-3 w-3" /> Delivery
@@ -137,11 +139,11 @@ export default function OrderHistoryPage() {
                   {new Date(e.placedAt).toLocaleString()} · {e.itemCount}{" "}
                   {e.itemCount === 1 ? "item" : "items"} · {formatPrice(e.totalCents)}
                 </p>
-              </div>
+              </Link>
               {e.isDelivery && (
                 <Link
                   href={`/track/${e.id}`}
-                  className="text-sm font-medium text-primary hover:underline"
+                  className="shrink-0 text-sm font-medium text-primary hover:underline"
                 >
                   Track →
                 </Link>

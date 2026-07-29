@@ -55,6 +55,11 @@ export function SiteNav() {
                   My orders
                 </Button>
               </Link>
+              <Link href="/account">
+                <Button variant="ghost" size="sm">
+                  Account
+                </Button>
+              </Link>
               <Button variant="outline" size="sm" onClick={() => void logout()}>
                 Sign out
               </Button>

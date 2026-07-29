@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@repo/db";
 import { menuItems, orderItems } from "@repo/db/schema";
 import {
@@ -21,6 +21,15 @@ export function listMenu(opts?: { includeArchived?: boolean }) {
 
 export function findMenuItem(id: string) {
   return db.query.menuItems.findFirst({ where: eq(menuItems.id, id) });
+}
+
+// Public single-item lookup for the menu detail page: excludes archived items
+// (they've been removed from the menu). Returns null when missing or archived.
+export async function getPublicMenuItem(id: string) {
+  const item = await db.query.menuItems.findFirst({
+    where: and(eq(menuItems.id, id), eq(menuItems.archived, false)),
+  });
+  return item ?? null;
 }
 
 export async function createMenuItem(input: CreateMenuItemInput) {

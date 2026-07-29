@@ -6,6 +6,9 @@ import type {
   users,
   reservations,
   restaurantSettings,
+  staffMembers,
+  reviews,
+  promotions,
 } from "@repo/db/schema";
 
 export type MenuItem = InferSelectModel<typeof menuItems>;
@@ -14,12 +17,38 @@ export type OrderItem = InferSelectModel<typeof orderItems>;
 export type OrderWithItems = Order & { items: OrderItem[] };
 
 // Customer account. NOTE: never expose `passwordHash` over the API — controllers
-// return a `SafeUser` (id/email/name/phone) instead.
+// return a `SafeUser` (id/email/name/phone/defaultAddress) instead.
 export type User = InferSelectModel<typeof users>;
-export type SafeUser = Pick<User, "id" | "email" | "name" | "phone">;
+export type SafeUser = Pick<
+  User,
+  "id" | "email" | "name" | "phone" | "defaultAddress"
+>;
 
 export type Reservation = InferSelectModel<typeof reservations>;
 export type RestaurantSettings = InferSelectModel<typeof restaurantSettings>;
+
+export type StaffMember = InferSelectModel<typeof staffMembers>;
+export const STAFF_ROLES = ["owner", "manager", "kitchen", "server"] as const;
+export type StaffRole = (typeof STAFF_ROLES)[number];
+
+export type Review = InferSelectModel<typeof reviews>;
+export const REVIEW_STATUSES = ["pending", "published", "hidden"] as const;
+export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
+
+export type Promotion = InferSelectModel<typeof promotions>;
+export const PROMO_TYPES = ["percent", "fixed"] as const;
+export type PromoType = (typeof PROMO_TYPES)[number];
+
+// Result of the public promo-code `validate` endpoint.
+export type PromoValidation =
+  | { valid: false }
+  | {
+      valid: true;
+      code: string;
+      description: string | null;
+      discountType: PromoType;
+      discountValue: number;
+    };
 
 export const RESERVATION_STATUSES = [
   "pending",

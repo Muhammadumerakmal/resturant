@@ -17,6 +17,21 @@ export async function getMenu(req: Request, res: Response) {
   res.json(items);
 }
 
+// GET /api/v1/menu/:id -> MenuItem (public; 404 for missing or archived)
+export async function getItem(req: Request, res: Response) {
+  const { id } = req.params;
+  if (!uuid.safeParse(id).success) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const item = await menuModel.getPublicMenuItem(id);
+  if (!item) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  res.json(item);
+}
+
 // POST /api/v1/menu -> 201 MenuItem (staff)
 export async function createItem(req: Request, res: Response) {
   const parsed = createMenuItemSchema.safeParse(req.body);

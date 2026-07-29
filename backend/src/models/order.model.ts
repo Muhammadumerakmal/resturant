@@ -1,4 +1,4 @@
-import { desc, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@repo/db";
 import { orders, orderItems, menuItems } from "@repo/db/schema";
 import {
@@ -39,6 +39,19 @@ export async function listOrdersForUser(userId: string, phone?: string | null) {
     with: { items: true },
     orderBy: desc(orders.createdAt),
     limit: 100,
+  });
+}
+
+// A single order the given user is allowed to see (placed while signed in, or a
+// delivery order matching their phone). Returns null otherwise, so the customer
+// order-detail page can't surface someone else's order.
+export function getMyOrderById(userId: string, id: string, phone?: string | null) {
+  const owner = phone
+    ? or(eq(orders.userId, userId), eq(orders.customerPhone, phone))
+    : eq(orders.userId, userId);
+  return db.query.orders.findFirst({
+    where: and(eq(orders.id, id), owner),
+    with: { items: true },
   });
 }
 

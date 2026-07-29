@@ -95,6 +95,26 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
+// Account page: edit profile. At least one field required (partial update).
+export const updateProfileSchema = z
+  .object({
+    name: z.string().min(1).max(120),
+    phone: z.string().min(3).max(40),
+    default_address: z.string().max(400),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, {
+    message: "Provide at least one field to update",
+  });
+
+export const changePasswordSchema = z.object({
+  current_password: z.string().min(1).max(200),
+  new_password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(200),
+});
+
 // --- Reservations ---------------------------------------------------------
 export const createReservationSchema = z.object({
   name: z.string().min(1).max(120),
@@ -125,6 +145,59 @@ export const updateSettingsSchema = z
     message: "Provide at least one field to update",
   });
 
+// --- Staff roster (owner) -------------------------------------------------
+export const createStaffSchema = z.object({
+  name: z.string().min(1).max(120),
+  email: z.string().email().max(200),
+  role: z.enum(["owner", "manager", "kitchen", "server"]),
+  active: z.boolean().optional(),
+});
+
+export const updateStaffSchema = createStaffSchema
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, {
+    message: "Provide at least one field to update",
+  });
+
+// --- Reviews --------------------------------------------------------------
+export const createReviewSchema = z.object({
+  name: z.string().min(1).max(120),
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().max(1000).optional(),
+  order_id: z.string().uuid().optional(),
+});
+
+export const updateReviewStatusSchema = z.object({
+  status: z.enum(["pending", "published", "hidden"]),
+});
+
+// --- Promotions (owner) ---------------------------------------------------
+export const createPromotionSchema = z.object({
+  code: z.string().min(1).max(60),
+  description: z.string().max(300).optional(),
+  discount_type: z.enum(["percent", "fixed"]),
+  discount_value: z.number().int().positive(),
+  active: z.boolean().optional(),
+  starts_at: z.string().datetime().optional(),
+  ends_at: z.string().datetime().optional(),
+});
+
+export const updatePromotionSchema = createPromotionSchema
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, {
+    message: "Provide at least one field to update",
+  });
+
+export const validatePromotionSchema = z.object({
+  code: z.string().min(1).max(60),
+});
+
+// --- Inventory ------------------------------------------------------------
+// stock_quantity nullable: null clears tracking (unlimited), a number sets it.
+export const setStockSchema = z.object({
+  stock_quantity: z.number().int().min(0).max(1_000_000).nullable(),
+});
+
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type PatchStatusInput = z.infer<typeof patchStatusSchema>;
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
@@ -134,6 +207,16 @@ export type DispatchInput = z.infer<typeof dispatchSchema>;
 export type StatsQueryInput = z.infer<typeof statsQuerySchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;
 export type UpdateReservationStatusInput = z.infer<typeof updateReservationStatusSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
+export type CreateStaffInput = z.infer<typeof createStaffSchema>;
+export type UpdateStaffInput = z.infer<typeof updateStaffSchema>;
+export type CreateReviewInput = z.infer<typeof createReviewSchema>;
+export type UpdateReviewStatusInput = z.infer<typeof updateReviewStatusSchema>;
+export type CreatePromotionInput = z.infer<typeof createPromotionSchema>;
+export type UpdatePromotionInput = z.infer<typeof updatePromotionSchema>;
+export type ValidatePromotionInput = z.infer<typeof validatePromotionSchema>;
+export type SetStockInput = z.infer<typeof setStockSchema>;

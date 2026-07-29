@@ -1,5 +1,12 @@
 import type { CookieOptions, Request, Response } from "express";
-import { signupSchema, loginSchema, type SafeUser, type User } from "@repo/shared";
+import {
+  signupSchema,
+  loginSchema,
+  updateProfileSchema,
+  changePasswordSchema,
+  type SafeUser,
+  type User,
+} from "@repo/shared";
 import { env } from "../config/env";
 import * as userModel from "../models/user.model";
 import {
@@ -11,7 +18,13 @@ import {
 
 // Never leak the password hash over the API.
 function toSafeUser(u: User): SafeUser {
-  return { id: u.id, email: u.email, name: u.name, phone: u.phone };
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    phone: u.phone,
+    defaultAddress: u.defaultAddress,
+  };
 }
 
 // Cookie flags. In production the frontend and backend live on different
@@ -87,6 +100,54 @@ export async function me(req: Request, res: Response) {
     return;
   }
   res.json({ user: toSafeUser(user) });
+}
+
+// PATCH /api/v1/auth/me -> updates the signed-in customer's profile (requireCustomer)
+export async function updateProfile(req: Request, res: Response) {
+  if (!req.userId) {
+    res.status(401).json({ error: "Sign in required" });
+    return;
+  }
+  const parsed = updateProfileSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+    return;
+  }
+  const updated = await userModel.updateUser(req.userId, {
+    name: parsed.data.name,
+    phone: parsed.data.phone,
+    defaultAddress: parsed.data.default_address,
+  });
+  if (!updated) {
+    res.status(401).json({ error: "Sign in required" });
+    return;
+  }
+  res.json({ user: toSafeUser(updated) });
+}
+
+// POST /api/v1/auth/change-password -> verifies current, sets new (requireCustomer)
+export async function changePassword(req: Request, res: Response) {
+  if (!req.userId) {
+    res.status(401).json({ error: "Sign in required" });
+    return;
+  }
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Validation failed", details: parsed.error.flatten() });
+    return;
+  }
+  const user = await userModel.findById(req.userId);
+  if (!user) {
+    res.status(401).json({ error: "Sign in required" });
+    return;
+  }
+  const ok = await verifyPassword(parsed.data.current_password, user.passwordHash);
+  if (!ok) {
+    res.status(400).json({ error: "Current password is incorrect" });
+    return;
+  }
+  await userModel.updatePassword(user.id, await hashPassword(parsed.data.new_password));
+  res.status(204).end();
 }
 
 // POST /api/v1/auth/logout

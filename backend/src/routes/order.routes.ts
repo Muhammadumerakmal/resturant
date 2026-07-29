@@ -16,6 +16,8 @@ ordersRouter.get("/stream", requireStaffQuery, ordersStream);
 
 // A customer's own orders — declared before "/:id" so "mine" isn't read as an id.
 ordersRouter.get("/mine", requireCustomer, orderController.listMyOrders);
+// A single one of the customer's own orders (receipt page). Ownership-checked.
+ordersRouter.get("/mine/:id", requireCustomer, orderController.getMyOrder);
 
 ordersRouter.get("/", requireStaff, orderController.listOrders);
 // Public order creation, but soft-attach the customer so a signed-in user's

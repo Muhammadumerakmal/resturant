@@ -26,6 +26,9 @@ export const menuItems = pgTable("menu_items", {
   available: boolean("available").notNull().default(true),
   // Soft-delete: hidden from menus but retained so past orders' FKs stay valid.
   archived: boolean("archived").notNull().default(false),
+  // Inventory tracking. NULL = untracked (unlimited); a number is decremented on
+  // each order and, when it hits 0, the item is auto-flipped to available=false.
+  stockQuantity: integer("stock_quantity"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -41,6 +44,8 @@ export const users = pgTable(
     name: text("name").notNull(),
     // Optional; lets us also match legacy phone-based delivery orders to a user.
     phone: text("phone"),
+    // Saved default delivery address, editable from the customer Account page.
+    defaultAddress: text("default_address"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -157,3 +162,74 @@ export const restaurantSettings = pgTable("restaurant_settings", {
   staffKeyHint: text("staff_key_hint"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Staff roster managed by the owner. This is a directory/roles record — NOT an
+// auth system; staff routes are still gated by the shared STAFF_API_KEY.
+export const staffMembers = pgTable(
+  "staff_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    role: text("role").notNull().default("server"), // owner|manager|kitchen|server
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "staff_members_role_valid",
+      sql`${t.role} in ('owner', 'manager', 'kitchen', 'server')`,
+    ),
+  ],
+);
+
+// Customer reviews submitted from the public site; staff moderate (publish/hide).
+export const reviews = pgTable(
+  "reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Both nullable: guests can review, and a review need not reference an order.
+    userId: uuid("user_id").references(() => users.id),
+    orderId: uuid("order_id").references(() => orders.id),
+    name: text("name").notNull(),
+    rating: integer("rating").notNull(),
+    comment: text("comment"),
+    status: text("status").notNull().default("pending"), // pending|published|hidden
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_reviews_status").on(t.status),
+    check("reviews_rating_range", sql`${t.rating} between 1 and 5`),
+    check(
+      "reviews_status_valid",
+      sql`${t.status} in ('pending', 'published', 'hidden')`,
+    ),
+  ],
+);
+
+// Discount codes managed by the owner. A public `validate` endpoint resolves a
+// code to its discount; applying it to an order total is a future step.
+export const promotions = pgTable(
+  "promotions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    code: text("code").notNull().unique(),
+    description: text("description"),
+    discountType: text("discount_type").notNull(), // percent|fixed
+    // percent: 1–100; fixed: amount in cents.
+    discountValue: integer("discount_value").notNull(),
+    active: boolean("active").notNull().default(true),
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      "promotions_discount_type_valid",
+      sql`${t.discountType} in ('percent', 'fixed')`,
+    ),
+    check("promotions_discount_value_positive", sql`${t.discountValue} > 0`),
+  ],
+);

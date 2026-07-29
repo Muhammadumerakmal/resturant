@@ -8,3 +8,9 @@ authRouter.post("/signup", authController.signup);
 authRouter.post("/login", authController.login);
 authRouter.post("/logout", authController.logout);
 authRouter.get("/me", requireCustomer, authController.me);
+authRouter.patch("/me", requireCustomer, authController.updateProfile);
+authRouter.post(
+  "/change-password",
+  requireCustomer,
+  authController.changePassword,
+);

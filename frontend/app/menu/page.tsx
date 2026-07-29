@@ -83,28 +83,29 @@ export default function MenuPage() {
               </h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 {list.map((item) => (
-                  <Card
-                    key={item.id}
-                    className={`flex flex-col p-4 ${item.available ? "" : "opacity-60"}`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-semibold">{item.name}</h3>
-                      <span className="shrink-0 font-semibold tabular-nums text-primary">
-                        {formatPrice(item.priceCents)}
-                      </span>
-                    </div>
-                    {item.description && (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {item.description}
-                      </p>
-                    )}
-                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                      {item.tags.map((t) => tagBadge(t))}
-                      {!item.available && (
-                        <Badge tone="warning">Unavailable</Badge>
+                  <Link key={item.id} href={`/menu/${item.id}`} className="group">
+                    <Card
+                      className={`flex h-full flex-col p-4 transition-colors group-hover:border-primary/40 ${item.available ? "" : "opacity-60"}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="font-semibold">{item.name}</h3>
+                        <span className="shrink-0 font-semibold tabular-nums text-primary">
+                          {formatPrice(item.priceCents)}
+                        </span>
+                      </div>
+                      {item.description && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {item.description}
+                        </p>
                       )}
-                    </div>
-                  </Card>
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                        {item.tags.map((t) => tagBadge(t))}
+                        {!item.available && (
+                          <Badge tone="warning">Unavailable</Badge>
+                        )}
+                      </div>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             </section>

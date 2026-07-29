@@ -50,6 +50,26 @@ export async function listMyOrders(req: Request, res: Response) {
   res.json(rows);
 }
 
+// GET /api/v1/orders/mine/:id -> the order if it belongs to the customer (requireCustomer)
+export async function getMyOrder(req: Request, res: Response) {
+  const { id } = req.params;
+  if (!uuid.safeParse(id).success) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  const user = req.userId ? await userModel.findById(req.userId) : null;
+  if (!user) {
+    res.status(401).json({ error: "Sign in required" });
+    return;
+  }
+  const order = await orderModel.getMyOrderById(user.id, id, user.phone);
+  if (!order) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  res.json(order);
+}
+
 // GET /api/v1/orders/:id -> Order (with items) (staff)
 export async function getOrder(req: Request, res: Response) {
   const { id } = req.params;

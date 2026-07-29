@@ -6,6 +6,7 @@ export const menuRouter = Router();
 
 // Public read.
 menuRouter.get("/", menuController.getMenu);
+menuRouter.get("/:id", menuController.getItem);
 
 // Owner admin CRUD (staff-only).
 menuRouter.post("/", requireStaff, menuController.createItem);
