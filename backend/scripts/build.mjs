@@ -20,7 +20,7 @@ rmSync(outDir, { recursive: true, force: true });
 mkdirSync(funcDir, { recursive: true });
 
 await build({
-  entryPoints: [path.join(backendDir, "api", "index.ts")],
+  entryPoints: [path.join(backendDir, "vercel-entry.ts")],
   outfile: path.join(funcDir, "index.js"),
   bundle: true,
   platform: "node",
