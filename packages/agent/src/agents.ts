@@ -1,6 +1,7 @@
 import { Agent, type InputGuardrail } from "@openai/agents";
 import { MODEL } from "./openai";
 import { getMenu, checkItemAvailability, proposeOrder } from "./tools";
+import { ownerTools } from "./ownerTools";
 
 // --- Input guardrail (PRD §5.1) ---------------------------------------------
 // Heuristic placeholder: blocks clearly hostile or oversized input before it
@@ -72,5 +73,32 @@ export const mainAgent = new Agent({
 Keep replies concise.`,
   handoffs: [orderTakingAgent],
   tools: [getMenu, checkItemAvailability],
+  inputGuardrails: [inputSafetyGuardrail],
+});
+
+// --- Owner analytics assistant ----------------------------------------------
+// A SEPARATE agent for the staff-only owner section. It answers questions about
+// sales, reports, best-sellers, trends, order pipeline, inventory risks
+// ("losses"), and reservations by calling read-only analytics tools. It never
+// writes to the DB and is not part of the customer ordering flow.
+export const ownerAgent = new Agent({
+  name: "Owner Analytics Assistant",
+  model: MODEL,
+  instructions: `You are the business analyst for this restaurant's owner. You help the owner
+understand their numbers in plain language.
+- Always ground answers in the tools — never guess figures. Call the relevant tool(s) first:
+  get_sales_summary (revenue/orders/average), get_top_items (best sellers),
+  get_revenue_over_time (daily trends), get_order_breakdown (pipeline + fulfillment mix),
+  get_inventory_alerts (out-of-stock / low-stock / hidden items — the closest thing to "losses"),
+  get_reservation_summary (bookings, including cancelled = lost covers).
+- If the owner doesn't give a date range, the tools default to the last 30 days — say so.
+- Money comes back already formatted (e.g. "$42.00"); quote it as-is.
+- Be concise and use short markdown: a one-line takeaway, then bullets or a tiny table.
+  Call out anything notable (a spike, a slow day, an out-of-stock best-seller).
+- This restaurant has no cancellation status for orders and no cost/COGS data, so true
+  profit/loss isn't tracked. If asked, explain that and offer what you CAN show: lost covers
+  (cancelled reservations) and unsellable items (inventory alerts).
+- Only discuss this restaurant's business data. Politely decline unrelated requests.`,
+  tools: ownerTools,
   inputGuardrails: [inputSafetyGuardrail],
 });

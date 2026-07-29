@@ -3,7 +3,12 @@ import {
   user,
   type AgentInputItem,
 } from "@openai/agents";
-import { configureModelProvider, mainAgent, type AgentContext } from "@repo/agent";
+import {
+  configureModelProvider,
+  mainAgent,
+  ownerAgent,
+  type AgentContext,
+} from "@repo/agent";
 
 // Service layer for the conversational agent. Holds the ephemeral session
 // history + per-session rate state, and runs the agent. Kept out of the

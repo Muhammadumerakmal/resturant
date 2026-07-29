@@ -1,3 +1,3 @@
-export { mainAgent } from "./agents";
+export { mainAgent, ownerAgent } from "./agents";
 export { configureModelProvider, MODEL } from "./openai";
 export type { AgentContext } from "./context";
