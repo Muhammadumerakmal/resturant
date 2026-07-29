@@ -59,7 +59,18 @@ export const proposeOrder = tool({
       )
       .min(1),
   }),
-  execute: async ({ items }, runContext) => {
+  execute: async (input, runContext) => {
+    // Explicitly type the args instead of relying on the SDK's inferred leaf
+    // types: under some tsconfigs (e.g. @vercel/node's own type-check pass) the
+    // zod-inferred fields degrade to `unknown`, which then breaks the Drizzle
+    // `inArray` overload below. Hand-typing keeps this compiling everywhere.
+    const { items } = input as {
+      items: Array<{
+        menu_item_id: string;
+        quantity: number;
+        notes: string | null;
+      }>;
+    };
     const ctx = runContext?.context as AgentContext | undefined;
 
     const ids = [...new Set(items.map((i) => i.menu_item_id))];
