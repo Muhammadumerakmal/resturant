@@ -1,6 +1,10 @@
 // Base URL of the backend API service. Public so client components can read it.
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+// NEXT_PUBLIC_* is inlined at build time, so a deploy that forgets to set this
+// ships with the localhost default baked in — which can never work in the
+// browser on a deployed site. Trim any trailing slash to avoid `//` in paths.
+export const API_BASE = (
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000"
+).replace(/\/+$/, "");
 
 export const api = (path: string) => `${API_BASE}${path}`;
 
@@ -13,6 +17,16 @@ export class ApiError extends Error {
     this.status = status;
     this.details = details;
   }
+}
+
+// True when the deployed frontend is about to call `localhost` because
+// NEXT_PUBLIC_API_BASE_URL wasn't set at build time. Detected in the browser by
+// comparing the (inlined) base against the page's own host.
+function isMisconfiguredBaseUrl(): boolean {
+  if (typeof window === "undefined") return false; // SSR: nothing to compare to
+  if (process.env.NEXT_PUBLIC_API_BASE_URL) return false; // explicitly configured
+  const host = window.location.hostname;
+  return host !== "localhost" && host !== "127.0.0.1";
 }
 
 // Thin fetch wrapper: injects the staff key, sends/parses JSON, and throws an
@@ -30,6 +44,15 @@ export async function apiFetch<T = unknown>(
   } = {},
 ): Promise<T> {
   const { method = "GET", body, staffKey, signal, cache, credentials } = opts;
+
+  // Turn a missing deploy config into a clear message instead of a bare
+  // "Failed to fetch" (browser network error) that points nowhere.
+  if (isMisconfiguredBaseUrl()) {
+    throw new ApiError(
+      "Backend URL is not configured. Set NEXT_PUBLIC_API_BASE_URL in the frontend deployment (to your backend's URL) and redeploy.",
+      0,
+    );
+  }
 
   const headers: Record<string, string> = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
