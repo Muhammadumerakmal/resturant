@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Bike,
+  CalendarClock,
   ChefHat,
   LogOut,
   Radio,
@@ -37,6 +38,7 @@ const NAV = [
   { href: "/owner/orders", label: "Orders", icon: ScrollText },
   { href: "/owner/deliveries", label: "Deliveries", icon: Bike },
   { href: "/owner/menu", label: "Menu", icon: UtensilsCrossed },
+  { href: "/owner/reservations", label: "Reservations", icon: CalendarClock },
   { href: "/owner/customers", label: "Customers", icon: Users },
   // /kitchen lives outside /owner (its own StaffGate) — a convenience link.
   { href: "/kitchen", label: "Kitchen", icon: ChefHat },
