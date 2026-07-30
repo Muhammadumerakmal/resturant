@@ -1,6 +1,12 @@
 // Run with: npm run db:seed  (loads .env.local via tsx --env-file)
 import { db } from "./index";
-import { menuItems, restaurantSettings } from "./schema";
+import {
+  menuItems,
+  restaurantSettings,
+  staffMembers,
+  reviews,
+  promotions,
+} from "./schema";
 
 const MENU = [
   {
@@ -290,9 +296,91 @@ async function seedSettings() {
   console.log("Seeded restaurant settings row.");
 }
 
+const STAFF = [
+  { name: "Amelia Chen", email: "amelia@tavola.example", role: "owner" },
+  { name: "Marco Rossi", email: "marco@tavola.example", role: "manager" },
+  { name: "Priya Sharma", email: "priya@tavola.example", role: "kitchen" },
+  { name: "Diego Fernández", email: "diego@tavola.example", role: "kitchen" },
+  { name: "Sofia Nguyen", email: "sofia@tavola.example", role: "server" },
+  { name: "Liam O'Brien", email: "liam@tavola.example", role: "server" },
+];
+
+async function seedStaff() {
+  // Additive + idempotent: insert only emails not already present.
+  const existing = await db
+    .select({ email: staffMembers.email })
+    .from(staffMembers);
+  const existingEmails = new Set(existing.map((r) => r.email));
+  const missing = STAFF.filter((s) => !existingEmails.has(s.email));
+  if (missing.length === 0) {
+    console.log("Staff up to date — nothing to add.");
+    return;
+  }
+  await db.insert(staffMembers).values(missing);
+  console.log(`Added ${missing.length} staff members.`);
+}
+
+const PROMOS = [
+  {
+    code: "WELCOME10",
+    description: "10% off your first order",
+    discountType: "percent",
+    discountValue: 10,
+  },
+  {
+    code: "FREEDELIVERY",
+    description: "$5 off delivery orders",
+    discountType: "fixed",
+    discountValue: 500,
+  },
+  {
+    code: "WEEKEND15",
+    description: "15% off on weekends",
+    discountType: "percent",
+    discountValue: 15,
+  },
+];
+
+async function seedPromotions() {
+  const existing = await db.select({ code: promotions.code }).from(promotions);
+  const existingCodes = new Set(existing.map((r) => r.code));
+  const missing = PROMOS.filter((p) => !existingCodes.has(p.code));
+  if (missing.length === 0) {
+    console.log("Promotions up to date — nothing to add.");
+    return;
+  }
+  await db.insert(promotions).values(missing);
+  console.log(`Added ${missing.length} promotions.`);
+}
+
+const REVIEWS = [
+  { name: "Jordan P.", rating: 5, comment: "Best butter chicken in town — will be back!", status: "published" },
+  { name: "Aisha K.", rating: 5, comment: "Cozy spot, fast delivery, everything was hot.", status: "published" },
+  { name: "Tom H.", rating: 4, comment: "Great food, the AI ordering chat is surprisingly good.", status: "published" },
+  { name: "Grace L.", rating: 4, comment: "Lovely paneer tikka. Portions could be bigger.", status: "published" },
+  { name: "Sam R.", rating: 3, comment: "Solid but the wait was a little long on a Friday.", status: "pending" },
+];
+
+async function seedReviews() {
+  // Additive + idempotent: reviews have no natural key, so match on the demo
+  // comment text to avoid inserting the same demo review twice on re-runs.
+  const existing = await db.select({ comment: reviews.comment }).from(reviews);
+  const existingComments = new Set(existing.map((r) => r.comment));
+  const missing = REVIEWS.filter((r) => !existingComments.has(r.comment));
+  if (missing.length === 0) {
+    console.log("Reviews up to date — nothing to add.");
+    return;
+  }
+  await db.insert(reviews).values(missing);
+  console.log(`Added ${missing.length} reviews.`);
+}
+
 async function main() {
   await seedMenu();
   await seedSettings();
+  await seedStaff();
+  await seedPromotions();
+  await seedReviews();
 }
 
 main()

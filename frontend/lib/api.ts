@@ -58,35 +58,69 @@ export async function apiFetch<T = unknown>(
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (staffKey) headers["x-staff-key"] = staffKey;
 
-  const res = await fetch(api(path), {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    signal,
-    cache: cache ?? "no-store",
-    // Always send the auth cookie (httpOnly JWT) unless a caller opts out.
-    credentials: credentials ?? "include",
-  });
+  // Serverless backends (Vercel) sleep when idle, so the first request after a
+  // cold start can be slow or transiently fail. Retry idempotent GETs a couple
+  // of times with a short backoff so a cold start ends up showing data instead
+  // of a false "nothing here". Never retry writes — they aren't idempotent.
+  const maxAttempts = method === "GET" ? 3 : 1;
+  let lastError: unknown;
 
-  // 204 / empty body
-  const text = await res.text();
-  const data = text ? safeJson(text) : null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(api(path), {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal,
+        cache: cache ?? "no-store",
+        // Always send the auth cookie (httpOnly JWT) unless a caller opts out.
+        credentials: credentials ?? "include",
+      });
+    } catch (err) {
+      // Network-level failure (cold-start reset, blip). Retry GETs unless the
+      // caller aborted; otherwise surface it.
+      lastError = err;
+      if (attempt < maxAttempts && signal?.aborted !== true) {
+        await delay(attempt * 600);
+        continue;
+      }
+      throw err;
+    }
 
-  if (!res.ok) {
-    const message =
-      (data && typeof data === "object" && "error" in data
-        ? String((data as { error: unknown }).error)
-        : null) ?? `Request failed (${res.status})`;
-    throw new ApiError(
-      message,
-      res.status,
-      data && typeof data === "object" && "details" in data
-        ? (data as { details: unknown }).details
-        : undefined,
-    );
+    // A 5xx on a GET is usually a transient cold-start/gateway error — retry.
+    if (!res.ok && res.status >= 500 && attempt < maxAttempts) {
+      await delay(attempt * 600);
+      continue;
+    }
+
+    // 204 / empty body
+    const text = await res.text();
+    const data = text ? safeJson(text) : null;
+
+    if (!res.ok) {
+      const message =
+        (data && typeof data === "object" && "error" in data
+          ? String((data as { error: unknown }).error)
+          : null) ?? `Request failed (${res.status})`;
+      throw new ApiError(
+        message,
+        res.status,
+        data && typeof data === "object" && "details" in data
+          ? (data as { details: unknown }).details
+          : undefined,
+      );
+    }
+
+    return data as T;
   }
 
-  return data as T;
+  // GET exhausted its retries on network errors.
+  throw lastError instanceof Error ? lastError : new Error("Request failed");
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function safeJson(text: string): unknown {
