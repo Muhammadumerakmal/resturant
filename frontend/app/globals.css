@@ -29,6 +29,14 @@
   --radius: 1rem;
   --shadow-card: 0 1px 2px rgb(28 25 23 / 0.04), 0 4px 16px rgb(28 25 23 / 0.05);
   --shadow-pop: 0 8px 30px rgb(28 25 23 / 0.10);
+  --shadow-lift: 0 12px 40px rgb(209 80 46 / 0.18);
+
+  /* Brand gradient (terracotta → amber) for headlines, badges, primary CTAs. */
+  --gradient-brand: linear-gradient(135deg, #d1502e 0%, #e8743f 45%, #f2a900 100%);
+  /* Soft radial glow behind hero content. */
+  --hero-glow:
+    radial-gradient(60% 70% at 15% 0%, rgb(209 80 46 / 0.12), transparent 70%),
+    radial-gradient(50% 60% at 100% 10%, rgb(242 169 0 / 0.12), transparent 70%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -54,6 +62,12 @@
 
     --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.35);
     --shadow-pop: 0 8px 30px rgb(0 0 0 / 0.5);
+    --shadow-lift: 0 14px 44px rgb(0 0 0 / 0.55);
+
+    --gradient-brand: linear-gradient(135deg, #e86a45 0%, #f0824f 45%, #f2b933 100%);
+    --hero-glow:
+      radial-gradient(60% 70% at 15% 0%, rgb(232 106 69 / 0.16), transparent 70%),
+      radial-gradient(50% 60% at 100% 10%, rgb(242 185 51 / 0.12), transparent 70%);
   }
 }
 
@@ -83,6 +97,9 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
+
+  --shadow-lift: var(--shadow-lift);
 }
 
 body {
@@ -104,4 +121,58 @@ body {
 
 .animate-rise-in {
   animation: rise-in 0.25s ease-out both;
+}
+
+/* Staggered entrance for hero/landing content. Set --delay inline per element. */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--delay, 0s);
+}
+
+/* Headline accent: brand gradient clipped to the text. */
+.text-gradient {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Decorative radial glow layer for hero sections. */
+.bg-hero-glow {
+  background-image: var(--hero-glow);
+}
+
+/* Brand gradient fill (badges, CTAs). */
+.bg-gradient-brand {
+  background-image: var(--gradient-brand);
+}
+
+/* Lift on hover for cards/links. */
+.hover-lift {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+}
+
+/* Display serif for headings + the wordmark. */
+.font-display {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-rise-in {
+    animation: none;
+  }
+  .hover-lift:hover {
+    transform: none;
+  }
 }

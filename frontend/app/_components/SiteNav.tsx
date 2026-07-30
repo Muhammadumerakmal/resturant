@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, UtensilsCrossed, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/AuthContext";
-import { useSettings } from "@/lib/useSettings";
 import { Button } from "./ui/Button";
+import { Brand } from "./Brand";
 
 const LINKS = [
   { href: "/menu", label: "Menu" },
@@ -23,7 +23,6 @@ const LINKS = [
 export function SiteNav() {
   const pathname = usePathname();
   const { user, ready, logout } = useAuth();
-  const settings = useSettings();
   const [open, setOpen] = useState(false);
 
   const linkClass = (href: string) =>
@@ -81,14 +80,7 @@ export function SiteNav() {
   return (
     <header className="border-b border-border/60 bg-background/80 backdrop-blur">
       <nav className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-6 py-3">
-        <Link
-          href="/"
-          className="flex items-center gap-2 font-semibold text-foreground"
-          onClick={() => setOpen(false)}
-        >
-          <UtensilsCrossed className="h-5 w-5 text-primary" />
-          {settings?.name ?? "Tavola"}
-        </Link>
+        <Brand onClick={() => setOpen(false)} />
 
         {/* Desktop: section links */}
         <div className="hidden items-center gap-1 sm:flex">
