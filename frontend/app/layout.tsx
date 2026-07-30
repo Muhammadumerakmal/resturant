@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import type { RestaurantSettings } from "@repo/shared";
 import "./globals.css";
 import { ToastProvider } from "./_components/ui/Toast";
 import { AuthProvider } from "@/lib/AuthContext";
+import { SettingsProvider } from "@/lib/useSettings";
+import { api } from "@/lib/api";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,11 +31,30 @@ export const metadata: Metadata = {
     "Order through a conversational assistant, with a live kitchen queue and owner dashboard.",
 };
 
-export default function RootLayout({
+// Fetch the public restaurant profile on the server so the name/tagline are in
+// the initial HTML (no fallback→real flash). Revalidated at most every 60s;
+// tolerant of a cold/unreachable backend (returns null, and the client hydrates
+// the value instead). The 5s timeout keeps a sleeping backend from stalling SSR.
+async function getInitialSettings(): Promise<RestaurantSettings | null> {
+  try {
+    const res = await fetch(api("/api/v1/settings"), {
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as RestaurantSettings;
+  } catch {
+    return null;
+  }
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const settings = await getInitialSettings();
+
   return (
     <html
       lang="en"
@@ -40,7 +62,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background font-sans text-foreground">
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <SettingsProvider initial={settings}>
+            <ToastProvider>{children}</ToastProvider>
+          </SettingsProvider>
         </AuthProvider>
       </body>
     </html>
