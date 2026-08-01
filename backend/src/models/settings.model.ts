@@ -11,7 +11,7 @@ async function ensureRow(): Promise<RestaurantSettings> {
   if (existing) return existing;
   const [created] = await db
     .insert(restaurantSettings)
-    .values({ name: "Tavola" })
+    .values({ name: "Umer Akmal Kitchen" })
     .returning();
   return created;
 }

@@ -26,7 +26,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Tavola — Restaurant Ordering",
+  title: "Umer Akmal Kitchen — Restaurant Ordering",
   description:
     "Order through a conversational assistant, with a live kitchen queue and owner dashboard.",
 };

@@ -412,7 +412,7 @@ function SiteFooter() {
       </div>
       <div className="border-t border-border/60">
         <div className="mx-auto w-full max-w-5xl px-6 py-4 text-xs text-muted-foreground">
-          © {year} {settings?.name ?? "Tavola"}. All rights reserved.
+          © {year} {settings?.name ?? "Umer Akmal Kitchen"}. All rights reserved.
         </div>
       </div>
     </footer>

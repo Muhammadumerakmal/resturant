@@ -8,7 +8,7 @@ import { SiteNav } from "../_components/SiteNav";
 
 export default function AboutPage() {
   const settings = useSettings();
-  const name = settings?.name ?? "Tavola";
+  const name = settings?.name ?? "Umer Akmal Kitchen";
 
   return (
     <>

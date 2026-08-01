@@ -129,7 +129,7 @@ export default function OwnerSettingsPage() {
               <Input
                 value={form.staff_key_hint}
                 onChange={set("staff_key_hint")}
-                placeholder="e.g. rotated 2026-07; in 1Password › Tavola"
+                placeholder="e.g. rotated 2026-07; in 1Password › Umer Akmal Kitchen"
               />
             </Field>
             <div className="flex justify-end">

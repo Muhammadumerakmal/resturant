@@ -1,4 +1,4 @@
-# 🍽️ Tavola — AI-Powered Restaurant Platform
+# 🍽️ Umer Akmal Kitchen — AI-Powered Restaurant Platform
 
 A full-stack restaurant application where **customers order through a conversational AI agent**
 instead of a static menu, the **kitchen** gets a live order queue, and the **owner** runs the whole

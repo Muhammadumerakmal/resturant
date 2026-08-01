@@ -13,7 +13,7 @@ import { apiFetch } from "./api";
 //
 // The value is fetched ON THE SERVER in the root layout and handed to
 // <SettingsProvider initial={...}>, so the server-rendered HTML already
-// contains the real name/tagline — no flash of the "Tavola" fallback that then
+// contains the real name/tagline — no flash of the "Umer Akmal Kitchen" fallback that then
 // swaps to the fetched value. The provider still revalidates on the client so
 // an owner edit shows up without a full reload, and it falls back to
 // localStorage / the API when the server fetch was unavailable at render time.

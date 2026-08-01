@@ -286,7 +286,7 @@ async function seedSettings() {
     return;
   }
   await db.insert(restaurantSettings).values({
-    name: "Tavola",
+    name: "Umer Akmal Kitchen",
     tagline: "Modern Indian kitchen — order, dine, deliver.",
     phone: "+1 (555) 012-3456",
     email: "hello@tavola.example",

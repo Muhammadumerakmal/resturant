@@ -18,7 +18,7 @@ export function Brand({
   onClick?: () => void;
 }) {
   const settings = useSettings();
-  const name = settings?.name ?? "Tavola";
+  const name = settings?.name ?? "Umer Akmal Kitchen";
 
   const badge = {
     sm: "h-8 w-8 rounded-lg",
